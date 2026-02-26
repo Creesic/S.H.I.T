@@ -160,8 +160,19 @@ impl BitVisualizerWindow {
     }
 
     pub fn set_message(&mut self, id: u32, bus: u8, data: &[u8]) {
-        // Only update if this is the currently selected (id, bus) combination
-        if self.selected_message_id == Some(id) && self.selected_bus == Some(bus) {
+        // Check if this is a different (id, bus) combination than what's currently selected
+        let is_different = match (self.selected_message_id, self.selected_bus) {
+            (Some(current_id), Some(current_bus)) => {
+                id != current_id || bus != current_bus
+            }
+            _ => true,  // Nothing selected yet
+        };
+
+        // Update activity and data if the combination changed
+        if is_different {
+            self.selected_message_id = Some(id);
+            self.selected_bus = Some(bus);
+
             let old_data = self.last_data;
             let mut padded_new: [u8; 8] = [0; 8];
             for (i, &byte) in data.iter().enumerate() {
@@ -172,7 +183,7 @@ impl BitVisualizerWindow {
             self.update_activity(&old_data, &padded_new);
         }
 
-        self.selected_message_id = Some(id);
+        // Always update current data
         self.last_data = self.current_data;
         self.current_data = [0; 8];
         for (i, &byte) in data.iter().enumerate() {
