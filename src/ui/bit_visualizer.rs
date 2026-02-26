@@ -131,6 +131,13 @@ impl BitVisualizerWindow {
         *self.charted_signals.borrow_mut() = signals;
     }
 
+    /// Check if a signal on the current bus is charted
+    fn is_signal_charted(&self, signal_name: &str) -> bool {
+        let bus = self.selected_bus.unwrap_or(0);
+        let key = format!("{}@bus{}", signal_name, bus);
+        self.charted_signals.borrow().contains(&key)
+    }
+
     /// Check if there's a pending chart toggle request and return the signal name
     pub fn take_chart_toggle_request(&self) -> Option<String> {
         self.chart_toggle_request.borrow_mut().take()
@@ -234,7 +241,8 @@ impl BitVisualizerWindow {
 
     fn render_content(&mut self, ui: &Ui, dbc: &mut DbcFile) {
         if let Some(id) = self.selected_message_id {
-            ui.text(format!("Message ID: 0x{:03X} ({})", id, id));
+            let bus = self.selected_bus.unwrap_or(0);
+            ui.text(format!("Message ID: 0x{:03X} (Bus {})", id, bus));
             if let Some(msg_def) = dbc.get_message(id) {
                 ui.same_line();
                 ui.text_colored([0.5, 0.8, 0.5, 1.0], &format!("({})", msg_def.name));
@@ -889,7 +897,7 @@ impl BitVisualizerWindow {
                     ui.next_column();
 
                     // Column 2: Chart button
-                    let is_charted = charted.contains(name);
+                    let is_charted = self.is_signal_charted(name);
                     let btn_color = if is_charted {
                         [0.2, 0.6, 0.3, 0.9]  // Green if charted
                     } else {
