@@ -2,10 +2,12 @@
 //!
 //! Each interface is assigned a unique bus ID (0, 1, 2, ...) and
 //! messages from all interfaces are aggregated with their bus IDs preserved.
+//!
+//! Bus IDs are reused when interfaces disconnect - the lowest available ID is always assigned.
 
 use crate::hardware::can_manager::{CanManager, ConnectionStatus, ManagerMessage, ManagerStats};
 use crate::hardware::can_interface::{CanConfig, InterfaceType};
-use std::collections::HashMap;
+use std::collections::{HashMap, BTreeSet};
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 
@@ -38,15 +40,58 @@ pub struct InterfaceStats {
     pub errors: u64,
 }
 
+/// Bus ID allocator that reuses freed IDs
+struct BusIdAllocator {
+    /// Available bus IDs (sorted, always get the lowest)
+    available: BTreeSet<u8>,
+    /// Next bus ID to assign if no freed IDs available
+    next_id: u8,
+}
+
+impl BusIdAllocator {
+    fn new() -> Self {
+        Self {
+            available: BTreeSet::new(),
+            next_id: 0,
+        }
+    }
+
+    /// Allocate the next available bus ID
+    fn allocate(&mut self) -> u8 {
+        // First try to reuse a freed ID (lowest available)
+        if let Some(&id) = self.available.iter().next() {
+            self.available.remove(&id);
+            id
+        } else {
+            // No freed IDs, allocate the next one
+            let id = self.next_id;
+            self.next_id = id.wrapping_add(1);
+            id
+        }
+    }
+
+    /// Free a bus ID so it can be reused
+    fn free(&mut self, bus_id: u8) {
+        self.available.insert(bus_id);
+    }
+
+    /// Free all bus IDs (reset allocator)
+    fn free_all(&mut self) {
+        self.available.clear();
+        self.next_id = 0;
+    }
+}
+
 /// Collection managing multiple CAN interfaces
 ///
-/// Each interface gets a unique sequential bus ID (0, 1, 2, ...)
-/// and messages from all interfaces are aggregated.
+/// Each interface gets a unique bus ID (0, 1, 2, ...)
+/// Bus IDs are reused when interfaces disconnect.
+/// Messages from all interfaces are aggregated.
 pub struct CanManagerCollection {
     /// Map of bus_id to managed interface
     interfaces: Arc<RwLock<HashMap<u8, ManagedInterface>>>,
-    /// Next available bus ID
-    next_bus_id: Arc<Mutex<u8>>,
+    /// Bus ID allocator
+    allocator: Arc<Mutex<BusIdAllocator>>,
 }
 
 impl CanManagerCollection {
@@ -54,11 +99,11 @@ impl CanManagerCollection {
     pub fn new() -> Self {
         Self {
             interfaces: Arc::new(RwLock::new(HashMap::new())),
-            next_bus_id: Arc::new(Mutex::new(0)),
+            allocator: Arc::new(Mutex::new(BusIdAllocator::new())),
         }
     }
 
-    /// Connect to a new CAN interface, assigning it the next available bus ID
+    /// Connect to a new CAN interface, assigning it the lowest available bus ID
     ///
     /// Returns the assigned bus ID on success
     pub async fn connect(
@@ -67,32 +112,35 @@ impl CanManagerCollection {
         config: CanConfig,
         interface_type: InterfaceType,
     ) -> Result<u8, String> {
-        // Assign next bus ID
+        // Allocate the lowest available bus ID
         let bus_id = {
-            let mut next = self.next_bus_id.lock().await;
-            let id = *next;
-            // Increment and wrap at 255 (we don't reuse IDs to avoid confusion)
-            *next = id.wrapping_add(1);
-            id
+            let mut allocator = self.allocator.lock().await;
+            allocator.allocate()
         };
 
         // Create new manager for this interface
         let mut manager = CanManager::new();
 
         // Connect using the bus ID
-        manager.connect_with_bus(interface, config, interface_type, bus_id).await?;
+        match manager.connect_with_bus(interface, config, interface_type, bus_id).await {
+            Ok(()) => {
+                // Store the interface
+                let managed = ManagedInterface {
+                    bus_id,
+                    manager,
+                    interface_name: interface.to_string(),
+                    interface_type,
+                };
 
-        // Store the interface
-        let managed = ManagedInterface {
-            bus_id,
-            manager,
-            interface_name: interface.to_string(),
-            interface_type,
-        };
-
-        self.interfaces.write().await.insert(bus_id, managed);
-
-        Ok(bus_id)
+                self.interfaces.write().await.insert(bus_id, managed);
+                Ok(bus_id)
+            }
+            Err(e) => {
+                // Connection failed, free the bus ID
+                self.allocator.lock().await.free(bus_id);
+                Err(e)
+            }
+        }
     }
 
     /// Disconnect a specific interface by bus ID
@@ -100,6 +148,8 @@ impl CanManagerCollection {
         let mut interfaces = self.interfaces.write().await;
         if let Some(mut managed) = interfaces.remove(&bus_id) {
             managed.manager.disconnect().await;
+            // Free the bus ID for reuse
+            self.allocator.lock().await.free(bus_id);
             Ok(())
         } else {
             Err(format!("No interface with bus ID {}", bus_id))
@@ -109,8 +159,11 @@ impl CanManagerCollection {
     /// Disconnect all interfaces
     pub async fn disconnect_all(&self) {
         let mut interfaces = self.interfaces.write().await;
-        for (_, mut managed) in interfaces.drain() {
+        let mut allocator = self.allocator.lock().await;
+
+        for (bus_id, mut managed) in interfaces.drain() {
             let _ = managed.manager.disconnect().await;
+            allocator.free(bus_id);
         }
     }
 

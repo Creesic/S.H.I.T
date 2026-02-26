@@ -468,6 +468,60 @@ impl CanInterface for SerialCanInterface {
 
         info!("CAN channel opened (listen_only: {})", config.listen_only);
 
+        // Warm-up period: Give the device time to start receiving CAN messages
+        // Some devices need a moment to initialize their CAN hardware
+        eprintln!("[CAN-Viz SerialCan] Waiting for device to stabilize...");
+        tokio::time::sleep(Duration::from_millis(200)).await;
+
+        // Verification: Try to read any initial data to verify the device is working
+        // This helps catch devices that are connected but not actually receiving
+        eprintln!("[CAN-Viz SerialCan] Verifying device is receiving data...");
+        let mut test_buf = [0u8; 256];
+        let verification_start = std::time::Instant::now();
+        let mut received_any_data = false;
+        let verification_timeout = Duration::from_millis(500);
+
+        while verification_start.elapsed() < verification_timeout {
+            match port.try_read(&mut test_buf) {
+                Ok(n) if n > 0 => {
+                    received_any_data = true;
+                    let data_str = String::from_utf8_lossy(&test_buf[..n]);
+                    eprintln!("[CAN-Viz SerialCan] Verification: Received {} bytes during warm-up: {:?}", n, data_str);
+
+                    // Check if this looks like CAN messages (starts with t, T, r, or R)
+                    if data_str.chars().any(|c| matches!(c, 't' | 'T' | 'r' | 'R')) {
+                        eprintln!("[CAN-Viz SerialCan] Verification: Detected CAN message format - device is receiving!");
+                        break;
+                    }
+                }
+                _ => {
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                }
+            }
+        }
+
+        if received_any_data {
+            eprintln!("[CAN-Viz SerialCan] Device verification: Data detected - connection healthy");
+        } else {
+            eprintln!("[CAN-Viz SerialCan] Device verification: No data during warm-up (this may be normal if no CAN traffic)");
+        }
+
+        // Final clear of any buffered data before handing off to the receive loop
+        eprintln!("[CAN-Viz SerialCan] Final buffer clear before starting receive loop...");
+        let mut final_buf = [0u8; 256];
+        let mut final_clear_count = 0;
+        loop {
+            match port.try_read(&mut final_buf) {
+                Ok(n) if n > 0 => {
+                    final_clear_count += n;
+                }
+                _ => break,
+            }
+        }
+        if final_clear_count > 0 {
+            eprintln!("[CAN-Viz SerialCan] Cleared {} bytes from final buffer", final_clear_count);
+        }
+
         self.port = Some(port);
         self.config = Some(config);
         self.status = CanStatus::Connected;
@@ -520,8 +574,9 @@ impl CanInterface for SerialCanInterface {
             let mut buf = [0u8; 256];
 
             // Use blocking read with timeout instead of try_read
+            // Increased timeout to 200ms for better reliability with slower devices
             match tokio::time::timeout(
-                Duration::from_millis(100),
+                Duration::from_millis(200),
                 port.read(&mut buf)
             ).await {
                 Ok(Ok(0)) => {

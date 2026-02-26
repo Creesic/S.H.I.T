@@ -202,6 +202,10 @@ impl CanManager {
             .map_err(|e| format!("Failed to connect: {}", e))?;
 
         *status.lock().await = ConnectionStatus::Connected;
+        eprintln!("[CAN Manager] Bus {} connected, starting receive loop...", bus_id);
+
+        // Small delay after connection to ensure device is ready
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         // Main loop
         loop {
