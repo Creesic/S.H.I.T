@@ -851,6 +851,18 @@ fn main() {
                             state.playback.seek_to_time(Some(new_time));
                         }
                     }
+
+                    // Handle timeline actions from charts (play/pause/step)
+                    if let Some(timeline_action) = state.charts.take_timeline_action() {
+                        use crate::ui::multi_graph::TimelineAction;
+                        match timeline_action {
+                            TimelineAction::Play => state.playback.play(),
+                            TimelineAction::Pause => state.playback.pause(),
+                            TimelineAction::StepBack => state.playback.step_back(),
+                            TimelineAction::StepForward => state.playback.step_forward(),
+                            TimelineAction::None => {}
+                        }
+                    }
                 }
 
                 // Hardware Manager with action handling
@@ -959,14 +971,13 @@ fn main() {
                                         use std::io::Write;
                                         // Write CSV header matching 130b.csv format
                                         let _ = writeln!(file, "time,addr,bus,data");
-                                        // Get start time for relative timestamps
-                                        let start_time = live_state.live_messages.first()
-                                            .map(|m| m.timestamp);
+                                        // Use recording_start for accurate relative timestamps
+                                        let start_time = live_state.recording_start;
                                         // Write messages with actual relative time (realtime)
                                         for msg in &live_state.live_messages {
                                             // Calculate relative time in seconds with microsecond precision
                                             let rel_time = if let Some(start) = start_time {
-                                                (msg.timestamp - start).num_microseconds() as f64 / 1_000_000.0
+                                                (msg.timestamp - start).num_microseconds().unwrap_or(0) as f64 / 1_000_000.0
                                             } else {
                                                 0.0
                                             };
@@ -978,7 +989,7 @@ fn main() {
                                                     .map(|b| format!("{:02X}", b))
                                                     .collect::<String>())
                                             };
-                                            let _ = writeln!(file, "{:.6},0x{:03X},{},{}",
+                                            let _ = writeln!(file, "{:.3},0x{:03X},{},{}",
                                                 rel_time, msg.id, msg.bus, data_hex);
                                         }
                                         state.status_message = Some(format!("Saved {} messages to {}", live_state.live_messages.len(), path.display()));

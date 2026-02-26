@@ -312,9 +312,9 @@ impl CanManager {
         Ok(())
     }
 
-    /// Get all received messages
+    /// Get all received messages and clear the buffer
     pub async fn get_messages(&self) -> Vec<ManagerMessage> {
-        self.messages.lock().await.iter().cloned().collect()
+        std::mem::take(&mut *self.messages.lock().await).into_iter().collect()
     }
 
     /// Clear received messages

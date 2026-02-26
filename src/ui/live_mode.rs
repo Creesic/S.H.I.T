@@ -85,7 +85,7 @@ impl LiveModeState {
             status_message: String::new(),
             stats: LiveStats::default(),
             live_messages: Vec::new(),
-            max_live_messages: 10000,  // Increased for longer recordings
+            max_live_messages: usize::MAX,  // No limit - don't truncate recordings
             recording_start: None,
             save_requested: false,
         }
@@ -178,7 +178,7 @@ impl LiveModeState {
     /// Stop recording
     pub fn stop_recording(&mut self) {
         self.is_recording = false;
-        self.recording_start = None;
+        // Don't clear recording_start - it's needed for CSV export timestamps
     }
 
     /// Get recording duration in seconds

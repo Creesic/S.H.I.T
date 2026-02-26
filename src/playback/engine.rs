@@ -56,12 +56,12 @@ impl PlaybackEngine {
 
     /// Start/resume playback
     pub fn play(&mut self) {
+        // If at end, restart from beginning
         if self.current_position >= self.messages.len() {
-            if self.config.loop_playback {
-                self.seek_to_time(self.messages.first().map(|m| m.timestamp));
-            } else {
-                return; // At end, not looping
+            if self.messages.is_empty() {
+                return; // No messages to play
             }
+            self.current_position = 0;
         }
 
         self.state = PlaybackState::Playing;
@@ -130,7 +130,15 @@ impl PlaybackEngine {
 
     /// Get current timestamp in the log
     pub fn current_time(&self) -> Option<DateTime<Utc>> {
-        self.messages.get(self.current_position).map(|m| m.timestamp)
+        if self.messages.is_empty() {
+            return None;
+        }
+        // If position is past the end, return the last message's timestamp
+        if self.current_position >= self.messages.len() {
+            self.messages.last().map(|m| m.timestamp)
+        } else {
+            self.messages.get(self.current_position).map(|m| m.timestamp)
+        }
     }
 
     /// Get start time of the log
@@ -144,9 +152,22 @@ impl PlaybackEngine {
     }
 
     /// Update playback state (call each frame)
-    pub fn update(&mut self, delta_time: StdDuration) {
+    pub fn update(&mut self, _delta_time: StdDuration) {
         if self.state != PlaybackState::Playing {
             return;
+        }
+
+        // Reinitialize virtual_start_time if it was reset (e.g., by seeking)
+        if self.virtual_start_time.is_none() {
+            if let Some(real_start) = self.real_start_time {
+                // Calculate new virtual_start based on current position
+                let current_time = self.messages.get(self.current_position)
+                    .map(|m| m.timestamp)
+                    .unwrap_or(real_start);
+                let elapsed_so_far = (current_time - real_start).num_milliseconds() as f64 / 1000.0;
+                let elapsed_instant = StdDuration::from_secs_f64(elapsed_so_far / self.config.speed);
+                self.virtual_start_time = Some(Instant::now() - elapsed_instant);
+            }
         }
 
         if let Some(virtual_start) = self.virtual_start_time {
@@ -169,6 +190,10 @@ impl PlaybackEngine {
                         self.seek_to_time(self.start_time());
                     } else {
                         self.state = PlaybackState::Stopped;
+                        // Reset to beginning so we can play again easily
+                        self.current_position = 0;
+                        self.virtual_start_time = None;
+                        self.real_start_time = None;
                     }
                 }
             }
