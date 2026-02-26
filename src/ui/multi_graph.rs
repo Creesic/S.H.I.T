@@ -7,6 +7,7 @@ use std::collections::{HashMap, HashSet};
 pub struct DataSeries {
     pub name: String,
     pub msg_id: u32,
+    pub bus: u8,
     pub data_points: Vec<(f64, DateTime<Utc>)>,
     pub color: [f32; 4],
     pub visible: bool,
@@ -14,10 +15,11 @@ pub struct DataSeries {
 }
 
 impl DataSeries {
-    pub fn new(name: String, msg_id: u32, color: [f32; 4]) -> Self {
+    pub fn new(name: String, msg_id: u32, bus: u8, color: [f32; 4]) -> Self {
         Self {
             name,
             msg_id,
+            bus,
             data_points: Vec::new(),
             color,
             visible: true,
@@ -65,8 +67,21 @@ impl DataSeries {
 pub struct SignalInfo {
     pub name: String,
     pub msg_id: u32,
+    pub bus: u8,
     pub msg_name: String,
     pub unit: String,
+}
+
+impl SignalInfo {
+    /// Get the display name including bus information
+    pub fn display_name(&self) -> String {
+        format!("{} [Bus {}]", self.name, self.bus)
+    }
+
+    /// Get the unique key for this signal (name + bus)
+    pub fn key(&self) -> String {
+        format!("{}@bus{}", self.name, self.bus)
+    }
 }
 
 /// Timeline actions emitted by the chart widget
@@ -81,7 +96,7 @@ pub enum TimelineAction {
 
 /// Charts panel with signal picker - Cabana-style
 pub struct MultiSignalGraph {
-    series: HashMap<String, DataSeries>,
+    series: HashMap<String, DataSeries>,  // Key: "signal_name@busN"
     available_signals: Vec<SignalInfo>,
     show_legend: bool,
     shared_y_axis: bool,
@@ -89,7 +104,7 @@ pub struct MultiSignalGraph {
     graph_height: f32,
     show_signal_picker: bool,
     signal_filter: String,
-    selected_signals: HashSet<String>,
+    selected_signals: HashSet<String>,  // Keys: "signal_name@busN"
     /// Pending seek request (offset in seconds from current time)
     seek_request: Option<f32>,
     /// Track if zoom slider is being dragged
@@ -152,8 +167,8 @@ impl MultiSignalGraph {
     }
 
     /// Check if a signal is charted
-    pub fn has_signal(&self, name: &str) -> bool {
-        self.series.contains_key(name)
+    pub fn has_signal(&self, key: &str) -> bool {
+        self.series.contains_key(key)
     }
 
     /// Get list of charted signal names
@@ -161,8 +176,8 @@ impl MultiSignalGraph {
         self.series.keys().cloned().collect()
     }
 
-    /// Toggle a signal on/off the chart by name
-    pub fn toggle_signal_by_name(&mut self, name: &str) {
+    /// Toggle a signal on/off the chart by key (name@busN format)
+    pub fn toggle_signal_by_name(&mut self, key: &str) {
         use std::io::Write;
         let mut f = std::fs::OpenOptions::new()
             .create(true)
@@ -170,61 +185,51 @@ impl MultiSignalGraph {
             .open("/tmp/can-viz-chart-debug.txt")
             .ok();
         if let Some(ref mut f) = f {
-            let _ = writeln!(f, "toggle_signal_by_name called with: {}", name);
-            let _ = writeln!(f, "  available_signals count: {}", self.available_signals.len());
-            for sig in &self.available_signals {
-                let _ = writeln!(f, "    - {}", sig.name);
-            }
+            let _ = writeln!(f, "toggle_signal_by_name called with: {}", key);
         }
 
-        if self.series.contains_key(name) {
+        if self.series.contains_key(key) {
             if let Some(ref mut f) = f { let _ = writeln!(f, "  signal already in series, removing"); }
-            self.series.remove(name);
+            self.series.remove(key);
         } else {
-            // Find the signal info and add it (clone to avoid borrow issues)
-            if let Some(info) = self.available_signals.iter().find(|s| s.name == name).cloned() {
-                if let Some(ref mut f) = f { let _ = writeln!(f, "  found signal info, adding"); }
-                self.add_signal(&info);
-            } else {
-                if let Some(ref mut f) = f { let _ = writeln!(f, "  signal NOT FOUND in available_signals!"); }
+            // Find the signal info by parsing the key to extract name and bus
+            if let Some(pos) = key.find("@bus") {
+                let name = &key[..pos];
+                let bus_str = &key[pos + 4..];
+                if let Ok(bus) = bus_str.parse::<u8>() {
+                    if let Some(info) = self.available_signals.iter()
+                        .find(|s| s.name == name && s.bus == bus)
+                        .cloned() {
+                        self.add_signal(&info);
+                    }
+                }
             }
         }
     }
 
     /// Add a signal to the chart
     pub fn add_signal(&mut self, info: &SignalInfo) {
-        if self.series.contains_key(&info.name) {
+        let key = info.key();
+        if self.series.contains_key(&key) {
             return;
         }
 
         let color = self.generate_color(self.series.len());
-        let series = DataSeries::new(info.name.clone(), info.msg_id, color);
-        self.series.insert(info.name.clone(), series);
-        self.selected_signals.insert(info.name.clone());
+        let series = DataSeries::new(info.name.clone(), info.msg_id, info.bus, color);
+        self.series.insert(key.clone(), series);
+        self.selected_signals.insert(key);
     }
 
-    /// Remove a signal from the chart
-    pub fn remove_signal(&mut self, name: &str) {
-        self.series.remove(name);
-        self.selected_signals.remove(name);
+    /// Remove a signal from the chart by key
+    pub fn remove_signal(&mut self, key: &str) {
+        self.series.remove(key);
+        self.selected_signals.remove(key);
     }
 
     /// Add a data point to a series
-    pub fn add_point(&mut self, series_name: &str, value: f64, timestamp: DateTime<Utc>) {
-        use std::io::Write;
-        let mut f = std::fs::OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open("/tmp/can-viz-chart-debug.txt")
-            .ok();
-        if let Some(ref mut f) = f {
-            let _ = writeln!(f, "add_point: series={}, value={}, ts={}", series_name, value, timestamp.format("%H:%M:%S%.3f"));
-        }
-
-        if let Some(series) = self.series.get_mut(series_name) {
+    pub fn add_point(&mut self, key: &str, value: f64, timestamp: DateTime<Utc>) {
+        if let Some(series) = self.series.get_mut(key) {
             series.add_point(value, timestamp);
-        } else {
-            if let Some(ref mut f) = f { let _ = writeln!(f, "  WARNING: series '{}' not found!", series_name); }
         }
     }
 

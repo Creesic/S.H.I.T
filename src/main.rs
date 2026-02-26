@@ -345,15 +345,23 @@ impl AppState {
         for msg in &self.messages {
             let signals = self.signal_decoder.decode_message(&msg);
             for signal in &signals {
-                if charted.contains(&signal.name) {
-                    self.charts.add_point(&signal.name, signal.physical_value, msg.timestamp);
+                let key = format!("{}@bus{}", signal.name, msg.bus);
+                if charted.contains(&key) {
+                    self.charts.add_point(&key, signal.physical_value, msg.timestamp);
                 }
             }
         }
     }
 
-    /// Populate chart data for a specific signal
-    fn populate_chart_data_for_signal(&mut self, signal_name: &str) {
+    /// Populate chart data for a specific signal (bus-aware key: "name@busN")
+    fn populate_chart_data_for_signal(&mut self, signal_key: &str) {
+        // Parse the bus-aware signal key
+        let (signal_name, bus) = if let Some(pos) = signal_key.find("@bus") {
+            (&signal_key[..pos], signal_key[pos + 4..].parse::<u8>().unwrap_or(0))
+        } else {
+            (signal_key, 0)
+        };
+
         use std::io::Write;
         let mut f = std::fs::OpenOptions::new()
             .create(true)
@@ -361,7 +369,7 @@ impl AppState {
             .open("/tmp/can-viz-chart-debug.txt")
             .ok();
         if let Some(ref mut f) = f {
-            let _ = writeln!(f, "populate_chart_data_for_signal: {}", signal_name);
+            let _ = writeln!(f, "populate_chart_data_for_signal: key={}, name={}, bus={}", signal_key, signal_name, bus);
             let _ = writeln!(f, "  file_loaded: {}, dbc_loaded: {}", self.file_loaded, self.dbc_loaded);
         }
 
@@ -371,8 +379,8 @@ impl AppState {
         }
 
         // Start incremental loading - begin at message index 0
-        self.pending_signal_loads.insert(signal_name.to_string(), 0);
-        if let Some(ref mut f) = f { let _ = writeln!(f, "  started incremental loading for {}", signal_name); }
+        self.pending_signal_loads.insert(signal_key.to_string(), 0);
+        if let Some(ref mut f) = f { let _ = writeln!(f, "  started incremental loading for {}", signal_key); }
     }
 
     // Process a batch of pending signal data loading (call this each frame)
@@ -381,15 +389,25 @@ impl AppState {
 
         let mut completed = Vec::new();
 
-        for (signal_name, start_idx) in self.pending_signal_loads.iter_mut() {
+        for (signal_key, start_idx) in self.pending_signal_loads.iter_mut() {
+            // Parse the bus-aware signal key
+            let (signal_name, bus) = if let Some(pos) = signal_key.find("@bus") {
+                (&signal_key[..pos], signal_key[pos + 4..].parse::<u8>().unwrap_or(0))
+            } else {
+                (signal_key.as_str(), 0)
+            };
+
             let end_idx = (*start_idx + BATCH_SIZE).min(self.messages.len());
 
             for msg_idx in *start_idx..end_idx {
                 if let Some(msg) = self.messages.get(msg_idx) {
-                    let signals = self.signal_decoder.decode_message(&msg);
-                    for signal in &signals {
-                        if signal.name == *signal_name {
-                            self.charts.add_point(&signal.name, signal.physical_value, msg.timestamp);
+                    // Only add data from messages on the correct bus
+                    if msg.bus == bus {
+                        let signals = self.signal_decoder.decode_message(&msg);
+                        for signal in &signals {
+                            if signal.name == signal_name {
+                                self.charts.add_point(signal_key, signal.physical_value, msg.timestamp);
+                            }
                         }
                     }
                 }
@@ -398,13 +416,13 @@ impl AppState {
             *start_idx = end_idx;
 
             if end_idx >= self.messages.len() {
-                completed.push(signal_name.clone());
+                completed.push(signal_key.clone());
             }
         }
 
         // Remove completed loads
-        for name in completed {
-            self.pending_signal_loads.remove(&name);
+        for key in completed {
+            self.pending_signal_loads.remove(&key);
         }
     }
 
@@ -423,6 +441,7 @@ impl AppState {
                         signals.push(SignalInfo {
                             name: sig.name.clone(),
                             msg_id: msg.id,
+                            bus: 0,  // TODO: support per-bus DBC definitions in the future
                             msg_name: msg.name.clone(),
                             unit: sig.unit.clone().unwrap_or_default(),
                         });
@@ -1081,8 +1100,9 @@ fn main() {
                         // Decode and add to charts if signals are charted
                         let decoded = state.signal_decoder.decode_message(&msg.message);
                         for signal in &decoded {
-                            if state.charts.has_signal(&signal.name) {
-                                state.charts.add_point(&signal.name, signal.physical_value, msg.timestamp);
+                            let key = format!("{}@bus{}", signal.name, msg.message.bus);
+                            if state.charts.has_signal(&key) {
+                                state.charts.add_point(&key, signal.physical_value, msg.timestamp);
                             }
                         }
                     }
@@ -1131,7 +1151,7 @@ fn main() {
                     }
 
                     if let Some(selected_msg) = selected {
-                        state.bit_visualizer.set_message(selected_msg.id, &selected_msg.data);
+                        state.bit_visualizer.set_message(selected_msg.id, selected_msg.bus, &selected_msg.data);
                     }
 
                     // Get list of charted signals
@@ -1155,6 +1175,7 @@ fn main() {
                         let was_charted = state.charts.has_signal(&signal_name);
                         if let Some(ref mut f) = f { let _ = writeln!(f, "  was_charted: {}", was_charted); }
 
+                        // signal_name is now a bus-aware key from bit visualizer ("name@busN")
                         state.charts.toggle_signal_by_name(&signal_name);
                         // If signal was newly added, populate its data
                         if !was_charted {

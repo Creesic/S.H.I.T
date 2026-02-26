@@ -27,6 +27,8 @@ pub type ToggleChartCallback = Box<dyn FnMut(&str)>;
 pub struct BitVisualizerWindow {
     /// Currently displayed message ID
     selected_message_id: Option<u32>,
+    /// Currently displayed bus ID
+    selected_bus: Option<u8>,
     /// Current message data (padded to 8 bytes)
     current_data: [u8; 8],
     /// Show signal overlays
@@ -75,6 +77,7 @@ impl BitVisualizerWindow {
     pub fn new() -> Self {
         Self {
             selected_message_id: None,
+            selected_bus: None,
             current_data: [0; 8],
             show_signals: true,
             selection_start: None,
@@ -135,11 +138,23 @@ impl BitVisualizerWindow {
 
     /// Request to toggle a signal on the chart
     fn request_chart_toggle(&self, signal_name: String) {
-        *self.chart_toggle_request.borrow_mut() = Some(signal_name);
+        // Include bus in the signal key for bus-aware tracking
+        let bus_id = self.selected_bus.unwrap_or(0);
+        let key = format!("{}@bus{}", signal_name, bus_id);
+        *self.chart_toggle_request.borrow_mut() = Some(key);
     }
 
-    pub fn set_message(&mut self, id: u32, data: &[u8]) {
-        if self.selected_message_id == Some(id) {
+    /// Get the currently selected (message_id, bus)
+    pub fn get_selected(&self) -> Option<(u32, u8)> {
+        match (self.selected_message_id, self.selected_bus) {
+            (Some(id), Some(bus)) => Some((id, bus)),
+            _ => None,
+        }
+    }
+
+    pub fn set_message(&mut self, id: u32, bus: u8, data: &[u8]) {
+        // Only update if this is the currently selected (id, bus) combination
+        if self.selected_message_id == Some(id) && self.selected_bus == Some(bus) {
             let old_data = self.last_data;
             let mut padded_new: [u8; 8] = [0; 8];
             for (i, &byte) in data.iter().enumerate() {
@@ -181,6 +196,7 @@ impl BitVisualizerWindow {
 
     pub fn clear(&mut self) {
         self.selected_message_id = None;
+        self.selected_bus = None;
         self.current_data = [0; 8];
         self.selection_start = None;
         self.selection_end = None;
@@ -700,18 +716,21 @@ impl BitVisualizerWindow {
         let mut result = Vec::new();
 
         if let Some(id) = self.selected_message_id {
-            if let Some(msg_def) = dbc.get_message(id) {
-                for (i, signal) in msg_def.signals.iter().enumerate() {
-                    // Use hash of signal name for consistent color across messages
-                    // This ensures the same signal name always gets the same color
-                    let color_idx = Self::hash_color_index(&signal.name);
-                    result.push(SignalInfo {
-                        name: signal.name.clone(),
-                        start_bit: signal.start_bit,
-                        bit_length: signal.bit_length,
-                        byte_order: signal.byte_order,
-                        color_idx,
-                    });
+            if let Some(bus) = self.selected_bus {
+                if let Some(msg_def) = dbc.get_message(id) {
+                    for (i, signal) in msg_def.signals.iter().enumerate() {
+                        // Use hash of signal name for consistent color across messages
+                        // This ensures the same signal name always gets the same color
+                        let color_idx = Self::hash_color_index(&signal.name);
+                        result.push(SignalInfo {
+                            name: signal.name.clone(),
+                            start_bit: signal.start_bit,
+                            bit_length: signal.bit_length,
+                            byte_order: signal.byte_order,
+                            color_idx,
+                            bus_id: bus,  // Include bus in signal info
+                        });
+                    }
                 }
             }
         }
@@ -950,6 +969,7 @@ struct SignalInfo {
     bit_length: u8,
     byte_order: ByteOrder,
     color_idx: usize,
+    bus_id: u8,
 }
 
 impl SignalInfo {
