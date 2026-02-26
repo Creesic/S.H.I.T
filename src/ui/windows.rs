@@ -4,10 +4,11 @@ use std::time::{Duration, Instant};
 use crate::core::CanMessage;
 use crate::core::dbc::DbcFile;
 
-/// State tracking for a single CAN message ID
+/// State tracking for a single CAN message ID on a specific bus
 #[derive(Clone, Debug)]
 pub struct MessageState {
     pub id: u32,
+    pub bus: u8,
     pub name: String,
     pub data: Vec<u8>,
     pub byte_colors: Vec<[f32; 4]>,
@@ -20,9 +21,10 @@ pub struct MessageState {
 }
 
 impl MessageState {
-    pub fn new(id: u32) -> Self {
+    pub fn new(id: u32, bus: u8) -> Self {
         Self {
             id,
+            bus,
             name: format!("MSG_0x{:03X}", id),
             data: Vec::new(),
             byte_colors: Vec::new(),
@@ -126,12 +128,12 @@ impl MessageState {
 
 /// Window showing live CAN message state - one row per CAN ID (Cabana style)
 pub struct MessageListWindow {
-    /// Map of CAN ID to current state
-    states: HashMap<u32, MessageState>,
+    /// Map of (CAN ID, bus) to current state
+    states: HashMap<(u32, u8), MessageState>,
     /// All messages (for full history mode)
     messages: Vec<CanMessage>,
-    /// Selected CAN ID
-    selected_id: Option<u32>,
+    /// Selected (CAN ID, bus)
+    selected: Option<(u32, u8)>,
     /// Display mode
     live_mode: bool,
     /// Filter string
@@ -148,7 +150,7 @@ impl MessageListWindow {
         Self {
             states: HashMap::new(),
             messages: Vec::new(),
-            selected_id: None,
+            selected: None,
             live_mode: true,
             filter: String::new(),
             sort_column: 0,
@@ -166,8 +168,8 @@ impl MessageListWindow {
 
         // Update all existing message names with DBC names
         if let Some(ref dbc) = self.dbc_file {
-            for (&msg_id, state) in self.states.iter_mut() {
-                if let Some(msg_def) = dbc.get_message(msg_id) {
+            for ((msg_id, _bus), state) in self.states.iter_mut() {
+                if let Some(msg_def) = dbc.get_message(*msg_id) {
                     // Update to DBC message name
                     state.name = msg_def.name.clone();
                 }
@@ -177,7 +179,8 @@ impl MessageListWindow {
 
     /// Update state with a new message (called during playback)
     pub fn update_message(&mut self, msg: &CanMessage) {
-        let state = self.states.entry(msg.id).or_insert_with(|| MessageState::new(msg.id));
+        let key = (msg.id, msg.bus);
+        let state = self.states.entry(key).or_insert_with(|| MessageState::new(msg.id, msg.bus));
 
         // Get message name from DBC if available
         let msg_name = self.dbc_file.as_ref()
@@ -191,16 +194,16 @@ impl MessageListWindow {
     pub fn clear(&mut self) {
         self.states.clear();
         self.messages.clear();
-        self.selected_id = None;
+        self.selected = None;
     }
 
     pub fn selected_message(&self) -> Option<&MessageState> {
-        self.selected_id.and_then(|id| self.states.get(&id))
+        self.selected.and_then(|key| self.states.get(&key))
     }
 
     /// Debug info
-    pub fn debug_info(&self) -> (Option<u32>, usize, usize) {
-        (self.selected_id, self.states.len(), self.messages.len())
+    pub fn debug_info(&self) -> (Option<(u32, u8)>, usize, usize) {
+        (self.selected, self.states.len(), self.messages.len())
     }
 
     pub fn render(&mut self, ui: &Ui, is_open: &mut bool) {
@@ -252,21 +255,25 @@ impl MessageListWindow {
 
     fn render_live_mode(&mut self, ui: &Ui) {
         // Header - use auto-sizing columns with manual width constraints
-        ui.columns(5, "msg_header", false);
+        ui.columns(6, "msg_header", false);
 
         // ID column - fixed width for hex ID
         ui.set_column_width(0, 60.0);
         ui.text("ID"); ui.next_column();
 
+        // Bus column - fixed width for bus number
+        ui.set_column_width(1, 40.0);
+        ui.text("Bus"); ui.next_column();
+
         // Name column - gets remaining space
         ui.text("Name"); ui.next_column();
 
         // Freq column - fixed width for frequency
-        ui.set_column_width(2, 50.0);
+        ui.set_column_width(3, 50.0);
         ui.text("Freq"); ui.next_column();
 
         // Count column - fixed width for count
-        ui.set_column_width(3, 50.0);
+        ui.set_column_width(4, 50.0);
         ui.text("Count"); ui.next_column();
 
         // Data column - gets remaining space
@@ -275,15 +282,18 @@ impl MessageListWindow {
 
         // Collect and sort states
         let filter_lower = self.filter.to_lowercase();
-        let mut sorted_ids: Vec<u32> = self.states.keys().cloned().collect();
+        let mut sorted_keys: Vec<(u32, u8)> = self.states.keys().cloned().collect();
 
         // Apply filter
         if !filter_lower.is_empty() {
-            sorted_ids.retain(|id| {
-                if let Some(state) = self.states.get(id) {
+            sorted_keys.retain(|&(id, bus)| {
+                if let Some(state) = self.states.get(&(id, bus)) {
                     let id_str = format!("0x{:03X}", id);
+                    let bus_str = format!("{}", bus);
                     let name_lower = state.name.to_lowercase();
-                    id_str.to_lowercase().contains(&filter_lower) || name_lower.contains(&filter_lower)
+                    id_str.to_lowercase().contains(&filter_lower) ||
+                    bus_str.contains(&filter_lower) ||
+                    name_lower.contains(&filter_lower)
                 } else {
                     false
                 }
@@ -291,23 +301,24 @@ impl MessageListWindow {
         }
 
         // Sort
-        sorted_ids.sort_by(|a, b| {
-            let state_a = self.states.get(a).unwrap();
-            let state_b = self.states.get(b).unwrap();
+        sorted_keys.sort_by(|&(id_a, bus_a), &(id_b, bus_b)| {
+            let state_a = self.states.get(&(id_a, bus_a)).unwrap();
+            let state_b = self.states.get(&(id_b, bus_b)).unwrap();
             let cmp = match self.sort_column {
-                0 => a.cmp(b),
-                1 => state_a.name.cmp(&state_b.name),
-                2 => state_a.freq.partial_cmp(&state_b.freq).unwrap_or(std::cmp::Ordering::Equal),
-                3 => state_a.count.cmp(&state_b.count),
-                _ => a.cmp(b),
+                0 => id_a.cmp(&id_b),
+                1 => bus_a.cmp(&bus_b),
+                2 => state_a.name.cmp(&state_b.name),
+                3 => state_a.freq.partial_cmp(&state_b.freq).unwrap_or(std::cmp::Ordering::Equal),
+                4 => state_a.count.cmp(&state_b.count),
+                _ => id_a.cmp(&id_b),
             };
             if self.sort_ascending { cmp } else { cmp.reverse() }
         });
 
         // Render rows
-        for id in sorted_ids {
-            let state = self.states.get(&id).unwrap();
-            let is_selected = self.selected_id == Some(id);
+        for (id, bus) in sorted_keys {
+            let state = self.states.get(&(id, bus)).unwrap();
+            let is_selected = self.selected == Some((id, bus));
             let is_active = state.is_active();
 
             // Highlight color for active/selected
@@ -322,8 +333,12 @@ impl MessageListWindow {
             // ID column - selectable spanning all columns
             let id_str = format!("0x{:03X}", id);
             if ui.selectable_config(&id_str).span_all_columns(true).build() {
-                self.selected_id = Some(id);
+                self.selected = Some((id, bus));
             }
+            ui.next_column();
+
+            // Bus column
+            ui.text(format!("{}", bus));
             ui.next_column();
 
             // Name column
@@ -422,14 +437,15 @@ impl MessageListWindow {
                 let i = i as usize;
                 if let Some(msg) = self.messages.get(i) {
                     let label = format!(
-                        "{} | 0x{:03X} | {}",
+                        "{} | 0x{:03X} [Bus {}] | {}",
                         msg.timestamp.format("%H:%M:%S%.3f"),
                         msg.id,
+                        msg.bus,
                         msg.hex_data()
                     );
 
                     if ui.selectable(&label) {
-                        self.selected_id = Some(msg.id);
+                        self.selected = Some((msg.id, msg.bus));
                     }
                 }
             }
