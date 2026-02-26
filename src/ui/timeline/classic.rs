@@ -1,4 +1,4 @@
-//! Classic timeline implementation - the original CAN-Viz timeline style
+//! Classic timeline implementation - the original timeline style
 
 use imgui::{StyleColor, Ui};
 use super::{TimelineAction, TimelineData, TimelineTheme};

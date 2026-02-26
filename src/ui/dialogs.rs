@@ -13,7 +13,7 @@ pub const DBC_FILE_FILTERS: &[(&str, &[&str])] = &[
     ("All Files", &["*"]),
 ];
 
-/// File dialog helper for CAN-Viz
+/// File dialog helper for S.H.I.T
 pub struct FileDialogs;
 
 impl FileDialogs {

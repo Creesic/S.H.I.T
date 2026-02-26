@@ -488,7 +488,7 @@ fn main() {
     let (window, gl_config) = DisplayBuilder::new()
         .with_window_builder(Some(
             WindowBuilder::new()
-                .with_title("CAN-Viz - CAN Bus Visualization Tool")
+                .with_title("S.H.I.T - Signal Harvesting & Interpretation Toolkit")
                 .with_inner_size(winit::dpi::LogicalSize::new(1400.0, 900.0))
         ))
         .build(&event_loop, glutin::config::ConfigTemplateBuilder::new(), |mut iter| {
@@ -742,7 +742,7 @@ fn main() {
                             state.show_shortcuts = true;
                         }
                         ui.separator();
-                        if ui.menu_item("About CAN-Viz") {
+                        if ui.menu_item("About S.H.I.T") {
                             state.about_dialog.show();
                         }
                     });
@@ -858,22 +858,22 @@ fn main() {
                     let action = state.hardware_manager.render(&ui, &mut state.show_hardware_manager);
                     match action {
                         LiveModeAction::Connect { interface, config } => {
-                            eprintln!("[CAN-Viz] Connect button clicked!");
-                            eprintln!("[CAN-Viz] Interface: {}", interface);
-                            eprintln!("[CAN-Viz] Bitrate: {}", config.bitrate);
-                            eprintln!("[CAN-Viz] Listen only: {}", config.listen_only);
+                            eprintln!("[S.H.I.T] Connect button clicked!");
+                            eprintln!("[S.H.I.T] Interface: {}", interface);
+                            eprintln!("[S.H.I.T] Bitrate: {}", config.bitrate);
+                            eprintln!("[S.H.I.T] Listen only: {}", config.listen_only);
 
                             // Determine interface type
                             let interface_type = if interface.starts_with("mock://") {
-                                eprintln!("[CAN-Viz] Interface type: Virtual (mock)");
+                                eprintln!("[S.H.I.T] Interface type: Virtual (mock)");
                                 InterfaceType::Virtual
                             } else {
-                                eprintln!("[CAN-Viz] Interface type: Serial");
+                                eprintln!("[S.H.I.T] Interface type: Serial");
                                 InterfaceType::Serial
                             };
 
                             // Connect to the CAN interface
-                            eprintln!("[CAN-Viz] Calling can_manager.connect()...");
+                            eprintln!("[S.H.I.T] Calling can_manager.connect()...");
                             let result = rt.block_on(state.can_manager.connect(
                                 &interface,
                                 crate::hardware::can_interface::CanConfig {
@@ -884,14 +884,14 @@ fn main() {
                                 interface_type,
                             ));
 
-                            eprintln!("[CAN-Viz] Connect result: {:?}", result);
+                            eprintln!("[S.H.I.T] Connect result: {:?}", result);
                             match result {
                                 Ok(()) => {
-                                    eprintln!("[CAN-Viz] Connected successfully!");
+                                    eprintln!("[S.H.I.T] Connected successfully!");
                                     state.status_message = Some(format!("Connected to {}", interface));
                                 }
                                 Err(e) => {
-                                    eprintln!("[CAN-Viz] Connection FAILED: {}", e);
+                                    eprintln!("[S.H.I.T] Connection FAILED: {}", e);
                                     state.status_message = Some(format!("Failed to connect: {}", e));
                                 }
                             }
@@ -907,13 +907,13 @@ fn main() {
                             let _ = rt.block_on(state.can_manager.send(msg));
                         }
                         LiveModeAction::StartRecording => {
-                            eprintln!("[CAN-Viz] Recording started");
+                            eprintln!("[S.H.I.T] Recording started");
                             state.status_message = Some("Recording started".to_string());
                         }
                         LiveModeAction::StopRecording => {
                             let live_state = state.hardware_manager.state();
                             let msg_count = live_state.live_messages.len();
-                            eprintln!("[CAN-Viz] Recording stopped - {} messages captured", msg_count);
+                            eprintln!("[S.H.I.T] Recording stopped - {} messages captured", msg_count);
 
                             if !live_state.live_messages.is_empty() {
                                 // Convert live messages to CanMessage format and load into main state
@@ -944,13 +944,13 @@ fn main() {
                                     state.populate_chart_data();
                                 }
 
-                                eprintln!("[CAN-Viz] Loaded {} recorded messages into playback", state.messages.len());
+                                eprintln!("[S.H.I.T] Loaded {} recorded messages into playback", state.messages.len());
                             }
 
                             state.status_message = Some(format!("Recording stopped - {} messages loaded into playback", msg_count));
                         }
                         LiveModeAction::SaveData => {
-                            eprintln!("[CAN-Viz] Save data requested - {} messages", state.hardware_manager.state().live_messages.len());
+                            eprintln!("[S.H.I.T] Save data requested - {} messages", state.hardware_manager.state().live_messages.len());
                             // Save to CSV file
                             let live_state = state.hardware_manager.state();
                             if let Some(path) = crate::ui::FileDialogs::export_csv_file() {
@@ -982,11 +982,11 @@ fn main() {
                                                 rel_time, msg.id, msg.bus, data_hex);
                                         }
                                         state.status_message = Some(format!("Saved {} messages to {}", live_state.live_messages.len(), path.display()));
-                                        eprintln!("[CAN-Viz] Saved {} messages to {}", live_state.live_messages.len(), path.display());
+                                        eprintln!("[S.H.I.T] Saved {} messages to {}", live_state.live_messages.len(), path.display());
                                     }
                                     Err(e) => {
                                         state.status_message = Some(format!("Failed to save: {}", e));
-                                        eprintln!("[CAN-Viz] Failed to save: {}", e);
+                                        eprintln!("[S.H.I.T] Failed to save: {}", e);
                                     }
                                 }
                             }
