@@ -254,30 +254,8 @@ impl MessageListWindow {
     }
 
     fn render_live_mode(&mut self, ui: &Ui) {
-        // Header - use auto-sizing columns with manual width constraints
-        ui.columns(6, "msg_header", false);
-
-        // ID column - fixed width for hex ID
-        ui.set_column_width(0, 60.0);
-        ui.text("ID"); ui.next_column();
-
-        // Bus column - fixed width for bus number
-        ui.set_column_width(1, 40.0);
-        ui.text("Bus"); ui.next_column();
-
-        // Name column - gets remaining space
-        ui.text("Name"); ui.next_column();
-
-        // Freq column - fixed width for frequency
-        ui.set_column_width(3, 50.0);
-        ui.text("Freq"); ui.next_column();
-
-        // Count column - fixed width for count
-        ui.set_column_width(4, 50.0);
-        ui.text("Count"); ui.next_column();
-
-        // Data column - gets remaining space
-        ui.text("Data"); ui.next_column();
+        // Header
+        ui.text("ID   Bus   Name              Freq     Count   Data");
         ui.separator();
 
         // Collect and sort states
@@ -321,50 +299,22 @@ impl MessageListWindow {
             let is_selected = self.selected == Some((id, bus));
             let is_active = state.is_active();
 
-            // Highlight color for active/selected
-            let _token = if is_selected {
-                Some(ui.push_style_color(StyleColor::Header, [0.3, 0.3, 0.5, 1.0]))
-            } else if is_active {
-                Some(ui.push_style_color(StyleColor::Header, [0.25, 0.35, 0.25, 1.0]))
-            } else {
-                None
-            };
+            // Format row label with fixed-width columns
+            let name_padded = format!("{:<18}", &state.name[..state.name.len().min(18)]);
+            let row_label = format!("0x{:03X}  {}    {}{:>8}  {:>6}   ##row_{}_{}",
+                id, bus, name_padded, state.freq_str(), state.count, id, bus);
 
-            // ID column - selectable spanning all columns
-            let id_str = format!("0x{:03X}", id);
-            if ui.selectable_config(&id_str).span_all_columns(true).build() {
+            if ui.selectable_config(&row_label).selected(is_selected).build() {
                 self.selected = Some((id, bus));
             }
-            ui.next_column();
 
-            // Bus column
-            ui.text(format!("{}", bus));
-            ui.next_column();
-
-            // Name column
-            if is_active {
-                ui.text_colored([0.5, 1.0, 0.5, 1.0], &state.name);
-            } else {
-                ui.text(&state.name);
+            // Show colored data on hover
+            if ui.is_item_hovered() {
+                ui.tooltip(|| {
+                    ui.text(format!("Data: {}", state.hex_data()));
+                });
             }
-            ui.next_column();
-
-            // Freq column
-            ui.text(&state.freq_str());
-            ui.next_column();
-
-            // Count column
-            ui.text(format!("{}", state.count));
-            ui.next_column();
-
-            // Data column - colored hex bytes
-            self.render_colored_bytes(ui, state);
-            ui.next_column();
-
-            drop(_token);
         }
-
-        ui.columns(1, "", false);
 
         // Show selected message details
         if let Some(state) = self.selected_message() {
@@ -445,6 +395,7 @@ impl MessageListWindow {
                     );
 
                     if ui.selectable(&label) {
+                        eprintln!("MessageList[History]: CLICKED id=0x{:03X}, bus={}", msg.id, msg.bus);
                         self.selected = Some((msg.id, msg.bus));
                     }
                 }

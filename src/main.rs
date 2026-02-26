@@ -790,6 +790,15 @@ fn main() {
                             state.about_dialog.show();
                         }
                     });
+
+                    // Version display on the right
+                    ui.same_line();
+                    let avail_width = ui.content_region_avail()[0];
+                    let version_text = env!("CARGO_PKG_VERSION");
+                    let version_width = ui.calc_text_size(version_text)[0];
+                    ui.dummy([avail_width - version_width, 0.0]);
+                    ui.same_line();
+                    ui.text_colored([0.5, 0.5, 0.5, 1.0], version_text);
                 });
 
                 // Status bar
@@ -1135,20 +1144,7 @@ fn main() {
                 // Bit Visualizer window - update with selected message
                 if state.show_bit_visualizer {
                     // Update visualizer with currently selected message from message list
-                    use std::io::Write;
                     let selected = state.message_list.selected_message();
-                    let debug_info = state.message_list.debug_info();
-                    let mut f = std::fs::OpenOptions::new()
-                        .create(true)
-                        .append(true)
-                        .open("/tmp/can-viz-chart-debug.txt")
-                        .ok();
-                    if let Some(ref mut f) = f {
-                        let _ = writeln!(f, "=== message_list check ===");
-                        let _ = writeln!(f, "  selected_id: {:?}", debug_info.0);
-                        let _ = writeln!(f, "  states count: {}", debug_info.1);
-                        let _ = writeln!(f, "  messages count: {}", debug_info.2);
-                    }
 
                     if let Some(selected_msg) = selected {
                         state.bit_visualizer.set_message(selected_msg.id, selected_msg.bus, &selected_msg.data);

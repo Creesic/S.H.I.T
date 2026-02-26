@@ -197,9 +197,13 @@ impl MultiSignalGraph {
                 let name = &key[..pos];
                 let bus_str = &key[pos + 4..];
                 if let Ok(bus) = bus_str.parse::<u8>() {
-                    if let Some(info) = self.available_signals.iter()
-                        .find(|s| s.name == name && s.bus == bus)
-                        .cloned() {
+                    // Match by name only (DBC definitions are bus-agnostic)
+                    // then create a new SignalInfo with the requested bus
+                    if let Some(template) = self.available_signals.iter()
+                        .find(|s| s.name == name)
+                    {
+                        let mut info = template.clone();
+                        info.bus = bus;  // Use the bus from the request key
                         self.add_signal(&info);
                     }
                 }
