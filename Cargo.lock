@@ -382,34 +382,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "can_viz"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "csv",
- "dirs",
- "glow",
- "glutin",
- "glutin-winit",
- "imgui",
- "imgui-glow-renderer",
- "imgui-winit-support",
- "raw-window-handle 0.5.2",
- "rfd",
- "serde",
- "serde_json",
- "socketcan",
- "thiserror 2.0.18",
- "tokio",
- "tokio-serial",
- "tracing",
- "tracing-subscriber",
- "winit",
-]
-
-[[package]]
 name = "cc"
 version = "1.2.55"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2041,6 +2013,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f40ca3c46823713e0d4209592e8d6e826aa57e928f09752619fc696c499637f6"
 dependencies = [
  "lazy_static",
+]
+
+[[package]]
+name = "shit"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "csv",
+ "dirs",
+ "glow",
+ "glutin",
+ "glutin-winit",
+ "imgui",
+ "imgui-glow-renderer",
+ "imgui-winit-support",
+ "raw-window-handle 0.5.2",
+ "rfd",
+ "serde",
+ "serde_json",
+ "socketcan",
+ "thiserror 2.0.18",
+ "tokio",
+ "tokio-serial",
+ "tracing",
+ "tracing-subscriber",
+ "winit",
 ]
 
 [[package]]

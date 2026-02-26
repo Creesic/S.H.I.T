@@ -20,26 +20,33 @@ pub fn load_csv(path: &str) -> Result<Vec<CanMessage>> {
 
     let mut messages = Vec::new();
 
-    // Use a fixed base time for all messages
-    let base_time = Utc::now();
+    // Use the first message's actual time as base, and accumulate for subsequent messages
+    let mut accumulated_time_secs = 0.0;
+    let mut last_seen_time = 0.0;
 
-    // Debug: log the base time
-    use std::io::Write;
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/can-viz-csv-debug.txt") {
-        let _ = writeln!(f, "Loading CSV: base_time = {}", base_time.format("%H:%M:%S%.3f"));
-    }
+    // Get base time as NOW for absolute timestamps
+    let base_time = Utc::now();
 
     for result in rdr.records() {
         let record = result.context("Failed to read CSV row")?;
 
         // Parse timestamp as relative seconds from log start
-        let timestamp = record.get(time_idx).and_then(|s| s.parse::<f64>().ok())
-            .map(|relative_secs| {
-                // Add relative seconds to base time
-                let ms = (relative_secs * 1000.0) as i64;
-                base_time + chrono::Duration::milliseconds(ms)
-            })
-            .unwrap_or_else(|| base_time);
+        let time_relative = record.get(time_idx).and_then(|s| s.parse::<f64>().ok())
+            .unwrap_or(0.0);
+
+        // Track accumulated time - handle both forward time and resets
+        if time_relative < last_seen_time - 0.1 {
+            // Time jumped back significantly - this is likely a new session
+            accumulated_time_secs += 0.001;  // Small increment for the new message
+        } else if time_relative > last_seen_time {
+            // Time moved forward - add the difference
+            accumulated_time_secs += (time_relative - last_seen_time);
+        }
+        last_seen_time = time_relative;
+
+        // Calculate actual timestamp
+        let ms = (accumulated_time_secs * 1000.0) as i64;
+        let timestamp = base_time + chrono::Duration::milliseconds(ms);
 
         // Parse bus ID
         let bus = record.get(bus_idx).and_then(|s| s.parse::<u8>().ok()).unwrap_or(0);
@@ -59,27 +66,7 @@ pub fn load_csv(path: &str) -> Result<Vec<CanMessage>> {
         let hex_data = record.get(data_idx).context("Missing data column")?;
         let data = CanMessage::parse_hex(hex_data)?;
 
-        // Debug: log first few messages
-        if messages.len() <= 5 {
-            if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/can-viz-csv-debug.txt") {
-                let _ = writeln!(f, "  Message {}: time={}, bus={}, id={:04X}, data={:02X?}",
-                    messages.len(),
-                    timestamp.format("%H:%M:%S%.3f"),
-                    bus, id, data);
-            }
-        }
-
         messages.push(CanMessage { timestamp, bus, id, data });
-    }
-
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open("/tmp/can-viz-csv-debug.txt") {
-        let _ = writeln!(f, "CSV loaded: {} messages", messages.len());
-        if let Some(first) = messages.first() {
-            let _ = writeln!(f, "  First message timestamp: {}", first.timestamp.format("%H:%M:%S%.3f"));
-        }
-        if let Some(last) = messages.last() {
-            let _ = writeln!(f, "  Last message timestamp: {}", last.timestamp.format("%H:%M:%S%.3f"));
-        }
     }
 
     Ok(messages)
