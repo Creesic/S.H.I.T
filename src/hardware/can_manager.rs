@@ -34,7 +34,7 @@ pub struct CanManager {
     interface_name: Arc<Mutex<Option<String>>>,
 }
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum ConnectionStatus {
     Disconnected,
     Connecting,
@@ -80,6 +80,17 @@ impl CanManager {
 
     /// Connect to a CAN interface
     pub async fn connect(&mut self, interface: &str, config: CanConfig, interface_type: InterfaceType) -> Result<(), String> {
+        self.connect_with_bus(interface, config, interface_type, 0).await
+    }
+
+    /// Connect to a CAN interface with a specific bus ID
+    pub async fn connect_with_bus(
+        &mut self,
+        interface: &str,
+        config: CanConfig,
+        interface_type: InterfaceType,
+        bus_id: u8,
+    ) -> Result<(), String> {
         // Set connecting status
         *self.status.lock().await = ConnectionStatus::Connecting;
 
@@ -124,6 +135,7 @@ impl CanManager {
                         messages.clone(),
                         stats.clone(),
                         stop_signal.clone(),
+                        bus_id,
                     ).await
                 }
                 InterfaceType::Virtual => {
@@ -136,6 +148,7 @@ impl CanManager {
                         messages.clone(),
                         stats.clone(),
                         stop_signal.clone(),
+                        bus_id,
                     ).await
                 }
                 _ => Err("Unsupported interface type".to_string()),
@@ -179,8 +192,9 @@ impl CanManager {
         _messages: Arc<Mutex<VecDeque<ManagerMessage>>>,
         stats: Arc<ManagerStats>,
         stop_signal: Arc<AtomicBool>,
+        bus_id: u8,
     ) -> Result<(), String> {
-        let mut can_if = SerialCanInterface::new(interface);
+        let mut can_if = SerialCanInterface::new_with_bus(interface, bus_id);
 
         // Connect to the interface
         can_if.connect(config.clone())
@@ -243,8 +257,9 @@ impl CanManager {
         _messages: Arc<Mutex<VecDeque<ManagerMessage>>>,
         stats: Arc<ManagerStats>,
         stop_signal: Arc<AtomicBool>,
+        bus_id: u8,
     ) -> Result<(), String> {
-        let mut can_if = MockCanInterface::new(interface);
+        let mut can_if = MockCanInterface::new_with_bus(interface, bus_id);
         can_if.set_auto_generate(true);
 
         can_if.connect(config)

@@ -9,7 +9,7 @@ use core::{CanMessage, DbcFile};
 use decode::SignalDecoder;
 use input::load_file;
 use playback::PlaybackEngine;
-use hardware::CanManager;
+use hardware::CanManagerCollection;
 use hardware::can_interface::InterfaceType;
 use ui::{MessageListWindow, FileDialogs, MultiSignalGraph, HardwareManagerWindow, LiveModeAction, LiveMessageWindow, MessageSenderWindow, MessageStatsWindow, PatternAnalyzerWindow, ShortcutManager, ExportDialog, AboutDialog, LiveModeState, BitVisualizerWindow, SignalInfo};
 use chrono::{DateTime, Utc};
@@ -71,7 +71,7 @@ struct AppState {
     // Bit visualizer visibility
     show_bit_visualizer: bool,
     // CAN hardware manager
-    can_manager: CanManager,
+    can_collection: CanManagerCollection,
     // Async loading state
     loading: bool,
     loading_progress: f32,
@@ -180,7 +180,7 @@ impl AppState {
             // Bit visualizer visibility
             show_bit_visualizer: settings.show_bit_visualizer,
             // CAN hardware manager
-            can_manager: CanManager::new(),
+            can_collection: CanManagerCollection::new(),
             // Async loading
             loading: false,
             loading_progress: 0.0,
@@ -910,8 +910,8 @@ fn main() {
                             };
 
                             // Connect to the CAN interface
-                            eprintln!("[S.H.I.T] Calling can_manager.connect()...");
-                            let result = rt.block_on(state.can_manager.connect(
+                            eprintln!("[S.H.I.T] Calling can_collection.connect()...");
+                            let result = rt.block_on(state.can_collection.connect(
                                 &interface,
                                 crate::hardware::can_interface::CanConfig {
                                     bitrate: config.bitrate,
@@ -923,9 +923,14 @@ fn main() {
 
                             eprintln!("[S.H.I.T] Connect result: {:?}", result);
                             match result {
-                                Ok(()) => {
-                                    eprintln!("[S.H.I.T] Connected successfully!");
-                                    state.status_message = Some(format!("Connected to {}", interface));
+                                Ok(bus_id) => {
+                                    eprintln!("[S.H.I.T] Connected successfully as Bus {}!", bus_id);
+                                    state.status_message = Some(format!("Connected to {} as Bus {}", interface, bus_id));
+                                    state.hardware_manager.state_mut().add_connected_interface(
+                                        bus_id,
+                                        interface.clone(),
+                                        crate::hardware::can_manager::ConnectionStatus::Connected,
+                                    );
                                 }
                                 Err(e) => {
                                     eprintln!("[S.H.I.T] Connection FAILED: {}", e);
@@ -934,14 +939,34 @@ fn main() {
                             }
                         }
                         LiveModeAction::Disconnect => {
-                            println!("Disconnect from interface");
-                            rt.block_on(state.can_manager.disconnect());
-                            state.status_message = Some("Disconnected from CAN interface".to_string());
+                            println!("Disconnect from all interfaces");
+                            rt.block_on(state.can_collection.disconnect_all());
+                            state.hardware_manager.state_mut().clear_connected_interfaces();
+                            state.status_message = Some("Disconnected from all CAN interfaces".to_string());
+                        }
+                        LiveModeAction::DisconnectBus { bus_id } => {
+                            println!("Disconnect Bus {}", bus_id);
+                            match rt.block_on(state.can_collection.disconnect(bus_id)) {
+                                Ok(()) => {
+                                    state.hardware_manager.state_mut().remove_connected_interface(bus_id);
+                                    state.status_message = Some(format!("Disconnected Bus {}", bus_id));
+                                }
+                                Err(e) => {
+                                    state.status_message = Some(format!("Disconnect failed: {}", e));
+                                }
+                            }
+                        }
+                        LiveModeAction::DisconnectAll => {
+                            println!("Disconnect all interfaces");
+                            rt.block_on(state.can_collection.disconnect_all());
+                            state.hardware_manager.state_mut().clear_connected_interfaces();
+                            state.status_message = Some("Disconnected all interfaces".to_string());
                         }
                         LiveModeAction::SendMessage { id, data } => {
                             println!("Send message: 0x{:03X} {:?}", id, data);
                             let msg = CanMessage::new(0, id, data);
-                            let _ = rt.block_on(state.can_manager.send(msg));
+                            // Send to bus 0 by default (could add UI to select bus)
+                            let _ = rt.block_on(state.can_collection.send_to_bus(0, msg));
                         }
                         LiveModeAction::StartRecording => {
                             eprintln!("[S.H.I.T] Recording started");
@@ -1034,7 +1059,12 @@ fn main() {
                 // Update live messages from CAN manager
                 if state.show_live_messages || state.hardware_manager.state().is_active {
                     // Poll for new messages (even if window is closed, we need to process them for charts)
-                    let messages = rt.block_on(state.can_manager.get_messages());
+                    let messages = rt.block_on(state.can_collection.get_messages());
+
+                    // Sync interface stats from CanManagerCollection
+                    let stats = rt.block_on(state.can_collection.get_stats());
+                    state.hardware_manager.state_mut().sync_interface_stats(&stats);
+
                     let live_state = state.hardware_manager.state_mut();
                     let is_recording = live_state.is_recording;
 

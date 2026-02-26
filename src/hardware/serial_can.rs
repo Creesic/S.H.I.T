@@ -37,10 +37,12 @@ pub struct SerialCanInterface {
     tx_sender: Option<mpsc::Sender<Vec<u8>>>,
     /// Line buffer for accumulating partial SLCAN frames
     line_buffer: String,
+    /// Bus ID for this interface
+    bus_id: u8,
 }
 
 impl SerialCanInterface {
-    /// Create a new serial CAN interface
+    /// Create a new serial CAN interface (defaults to bus 0)
     pub fn new(port_name: &str) -> Self {
         debug!("Creating new SerialCanInterface for port: {}", port_name);
         Self {
@@ -52,6 +54,23 @@ impl SerialCanInterface {
             rx_count: Arc::new(AtomicUsize::new(0)),
             tx_sender: None,
             line_buffer: String::new(),
+            bus_id: 0,
+        }
+    }
+
+    /// Create a new serial CAN interface with a specific bus ID
+    pub fn new_with_bus(port_name: &str, bus_id: u8) -> Self {
+        debug!("Creating new SerialCanInterface for port: {} with bus_id: {}", port_name, bus_id);
+        Self {
+            name: port_name.to_string(),
+            status: CanStatus::Disconnected,
+            port: None,
+            config: None,
+            rx_buffer: VecDeque::with_capacity(RX_BUFFER_SIZE),
+            rx_count: Arc::new(AtomicUsize::new(0)),
+            tx_sender: None,
+            line_buffer: String::new(),
+            bus_id,
         }
     }
 
@@ -101,7 +120,7 @@ impl SerialCanInterface {
     }
 
     /// Parse an SLCAN frame into a CAN message
-    fn parse_frame(line: &str) -> Option<CanMessage> {
+    fn parse_frame(&self, line: &str) -> Option<CanMessage> {
         if line.is_empty() {
             return None;
         }
@@ -111,19 +130,19 @@ impl SerialCanInterface {
 
         match frame_type {
             // Standard CAN frame (11-bit ID)
-            't' => Self::parse_standard_frame(data, false),
+            't' => Self::parse_standard_frame(data, false, self.bus_id),
             // Extended CAN frame (29-bit ID)
-            'T' => Self::parse_extended_frame(data, false),
+            'T' => Self::parse_extended_frame(data, false, self.bus_id),
             // Standard RTR frame
-            'r' => Self::parse_standard_frame(data, true),
+            'r' => Self::parse_standard_frame(data, true, self.bus_id),
             // Extended RTR frame
-            'R' => Self::parse_extended_frame(data, true),
+            'R' => Self::parse_extended_frame(data, true, self.bus_id),
             _ => None,
         }
     }
 
     /// Parse a standard (11-bit ID) CAN frame
-    fn parse_standard_frame(data: &str, _is_rtr: bool) -> Option<CanMessage> {
+    fn parse_standard_frame(data: &str, _is_rtr: bool, bus_id: u8) -> Option<CanMessage> {
         // Format: TIIIDDDDDDDDDDD (ID = 3 hex chars, DLC = 1 hex char, Data = 0-16 hex chars)
         if data.len() < 4 {
             return None;
@@ -140,11 +159,11 @@ impl SerialCanInterface {
         let hex_data = &data[4..expected_len];
         let msg_data = Self::parse_hex_data(hex_data)?;
 
-        Some(CanMessage::new(0, id, msg_data))
+        Some(CanMessage::new(bus_id, id, msg_data))
     }
 
     /// Parse an extended (29-bit ID) CAN frame
-    fn parse_extended_frame(data: &str, _is_rtr: bool) -> Option<CanMessage> {
+    fn parse_extended_frame(data: &str, _is_rtr: bool, bus_id: u8) -> Option<CanMessage> {
         // Format: TIIIIIIIIDDDDDDDDDDD (ID = 8 hex chars, DLC = 1 hex char, Data = 0-16 hex chars)
         if data.len() < 9 {
             return None;
@@ -161,7 +180,7 @@ impl SerialCanInterface {
         let hex_data = &data[9..expected_len];
         let msg_data = Self::parse_hex_data(hex_data)?;
 
-        Some(CanMessage::new(0, id, msg_data))
+        Some(CanMessage::new(bus_id, id, msg_data))
     }
 
     /// Parse hex data string into bytes
@@ -524,7 +543,7 @@ impl CanInterface for SerialCanInterface {
 
                             if !line.is_empty() {
                                 debug!("Processing SLCAN line: {:?}", line);
-                                if let Some(msg) = Self::parse_frame(&line) {
+                                if let Some(msg) = self.parse_frame(&line) {
                                     debug!("Parsed CAN message: ID=0x{:03X}, len={}",
                                            msg.id, msg.data.len());
                                     if self.rx_buffer.len() < RX_BUFFER_SIZE {
@@ -544,7 +563,7 @@ impl CanInterface for SerialCanInterface {
 
                             if !line.is_empty() {
                                 debug!("Processing SLCAN line (LF): {:?}", line);
-                                if let Some(msg) = Self::parse_frame(&line) {
+                                if let Some(msg) = self.parse_frame(&line) {
                                     debug!("Parsed CAN message: ID=0x{:03X}, len={}",
                                            msg.id, msg.data.len());
                                     if self.rx_buffer.len() < RX_BUFFER_SIZE {

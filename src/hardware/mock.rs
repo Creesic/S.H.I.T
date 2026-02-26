@@ -16,10 +16,11 @@ pub struct MockCanInterface {
     tx_buffer: VecDeque<CanMessage>,
     message_counter: u32,
     auto_generate: bool,
+    bus_id: u8,
 }
 
 impl MockCanInterface {
-    /// Create a new mock interface
+    /// Create a new mock interface (defaults to bus 0)
     pub fn new(name: &str) -> Self {
         Self {
             name: name.to_string(),
@@ -29,6 +30,21 @@ impl MockCanInterface {
             tx_buffer: VecDeque::new(),
             message_counter: 0,
             auto_generate: false,
+            bus_id: 0,
+        }
+    }
+
+    /// Create a new mock interface with a specific bus ID
+    pub fn new_with_bus(name: &str, bus_id: u8) -> Self {
+        Self {
+            name: name.to_string(),
+            status: CanStatus::Disconnected,
+            config: None,
+            rx_buffer: VecDeque::new(),
+            tx_buffer: VecDeque::new(),
+            message_counter: 0,
+            auto_generate: false,
+            bus_id,
         }
     }
 
@@ -71,7 +87,7 @@ impl MockCanInterface {
             0xEF,
         ];
 
-        CanMessage::new(0, id, data)
+        CanMessage::new(self.bus_id, id, data)
     }
 }
 

@@ -1,5 +1,6 @@
 use imgui::{Condition, StyleColor, Ui};
 use crate::hardware::can_interface::{CanConfig, CanStatus, InterfaceType};
+use crate::hardware::can_manager::ConnectionStatus;
 use chrono::{Utc, Timelike};
 
 /// Live mode state for hardware interface management
@@ -26,6 +27,23 @@ pub struct LiveModeState {
     pub recording_start: Option<chrono::DateTime<Utc>>,
     /// Request to save data
     pub save_requested: bool,
+    /// Connected interfaces (for multi-bus support)
+    pub connected_interfaces: Vec<ConnectedInterface>,
+}
+
+/// State for a connected interface
+#[derive(Clone)]
+pub struct ConnectedInterface {
+    /// Bus ID for this interface
+    pub bus_id: u8,
+    /// Interface name (e.g., "/dev/ttyUSB0")
+    pub interface_name: String,
+    /// Current connection status
+    pub status: ConnectionStatus,
+    /// Number of messages received
+    pub messages_received: u64,
+    /// Number of errors
+    pub errors: u64,
 }
 
 /// Interface info for UI
@@ -88,6 +106,7 @@ impl LiveModeState {
             max_live_messages: usize::MAX,  // No limit - don't truncate recordings
             recording_start: None,
             save_requested: false,
+            connected_interfaces: Vec::new(),
         }
     }
 
@@ -197,6 +216,60 @@ impl LiveModeState {
         let minutes = ((duration_secs % 3600.0) / 60.0) as u32;
         let seconds = (duration_secs % 60.0) as u32;
         format!("{:02}:{:02}:{:02}", hours, minutes, seconds)
+    }
+
+    /// Add a newly connected interface
+    pub fn add_connected_interface(&mut self, bus_id: u8, name: String, status: ConnectionStatus) {
+        self.connected_interfaces.push(ConnectedInterface {
+            bus_id,
+            interface_name: name,
+            status,
+            messages_received: 0,
+            errors: 0,
+        });
+        self.update_active_status();
+    }
+
+    /// Remove a disconnected interface
+    pub fn remove_connected_interface(&mut self, bus_id: u8) {
+        self.connected_interfaces.retain(|iface| iface.bus_id != bus_id);
+        self.update_active_status();
+    }
+
+    /// Update interface status
+    pub fn update_interface_status(&mut self, bus_id: u8, status: ConnectionStatus) {
+        if let Some(iface) = self.connected_interfaces.iter_mut().find(|i| i.bus_id == bus_id) {
+            iface.status = status;
+        }
+        self.update_active_status();
+    }
+
+    /// Update interface statistics
+    pub fn update_interface_stats(&mut self, bus_id: u8, messages_received: u64, errors: u64) {
+        if let Some(iface) = self.connected_interfaces.iter_mut().find(|i| i.bus_id == bus_id) {
+            iface.messages_received = messages_received;
+            iface.errors = errors;
+        }
+    }
+
+    /// Clear all connected interfaces
+    pub fn clear_connected_interfaces(&mut self) {
+        self.connected_interfaces.clear();
+        self.update_active_status();
+    }
+
+    /// Update interface stats from CanManagerCollection
+    pub fn sync_interface_stats(&mut self, stats: &[crate::hardware::can_collection::InterfaceStats]) {
+        for stat in stats {
+            self.update_interface_stats(stat.bus_id, stat.messages_received, stat.errors);
+            self.update_interface_status(stat.bus_id, stat.status);
+        }
+    }
+
+    /// Update is_active based on connected interfaces
+    fn update_active_status(&mut self) {
+        self.is_active = self.connected_interfaces.iter()
+            .any(|iface| matches!(iface.status, ConnectionStatus::Connected));
     }
 
     /// Check if recording is empty
@@ -405,35 +478,65 @@ impl HardwareManagerWindow {
 
         ui.separator();
 
-        // Connect/Disconnect button
-        if self.state.is_active {
-            if ui.button("Disconnect") {
-                self.state.is_active = false;
-                self.state.status_message = "Disconnected".to_string();
-                action = LiveModeAction::Disconnect;
-            }
-        } else {
-            let can_connect = self.state.selected_interface.is_some();
-            let _disabled = if !can_connect {
-                Some(ui.begin_disabled(true))
-            } else {
-                None
-            };
+        // Connected Interfaces section
+        if !self.state.connected_interfaces.is_empty() {
+            ui.text(format!("Connected Interfaces ({}):", self.state.connected_interfaces.len()));
 
-            if ui.button("Connect") {
-                if let Some(ref iface) = self.state.selected_interface {
-                    self.state.is_active = true;
-                    self.state.stats.start_time = Some(Utc::now());
-                    self.state.status_message = format!("Connected to {}", iface);
-                    action = LiveModeAction::Connect {
-                        interface: iface.clone(),
-                        config: self.state.config.clone(),
-                    };
+            for iface in &self.state.connected_interfaces {
+                let status_color = match iface.status {
+                    ConnectionStatus::Connected => [0.0, 1.0, 0.0, 1.0],
+                    ConnectionStatus::Connecting => [1.0, 0.8, 0.0, 1.0],
+                    ConnectionStatus::Error => [1.0, 0.0, 0.0, 1.0],
+                    ConnectionStatus::Disconnected => [0.5, 0.5, 0.5, 1.0],
+                };
+
+                let header = format!("Bus {} - {}", iface.bus_id, iface.interface_name);
+                if ui.collapsing_header(&header, imgui::TreeNodeFlags::empty()) {
+                    ui.indent();
+
+                    // Status indicator
+                    ui.text_colored(status_color, format!("{:?}", iface.status));
+
+                    // Statistics
+                    ui.text(format!("Messages: {} | Errors: {}", iface.messages_received, iface.errors));
+
+                    // Disconnect button for this interface
+                    if ui.small_button(&format!("Disconnect Bus {}", iface.bus_id)) {
+                        action = LiveModeAction::DisconnectBus { bus_id: iface.bus_id };
+                    }
+
+                    ui.unindent();
                 }
             }
 
-            drop(_disabled);
+            ui.separator();
+
+            // "Disconnect All" button
+            if ui.button("Disconnect All") {
+                action = LiveModeAction::DisconnectAll;
+            }
         }
+
+        // Connect button (for new interfaces)
+        let can_connect = self.state.selected_interface.is_some();
+        let _disabled = if !can_connect {
+            Some(ui.begin_disabled(true))
+        } else {
+            None
+        };
+
+        if ui.button("Connect") {
+            if let Some(ref iface) = self.state.selected_interface {
+                self.state.stats.start_time = Some(Utc::now());
+                self.state.status_message = format!("Connecting to {}...", iface);
+                action = LiveModeAction::Connect {
+                    interface: iface.clone(),
+                    config: self.state.config.clone(),
+                };
+            }
+        }
+
+        drop(_disabled);
 
         // Status message
         if !self.state.status_message.is_empty() {
@@ -510,6 +613,10 @@ pub enum LiveModeAction {
         config: LiveCanConfig,
     },
     Disconnect,
+    DisconnectBus {
+        bus_id: u8,
+    },
+    DisconnectAll,
     SendMessage {
         id: u32,
         data: Vec<u8>,
