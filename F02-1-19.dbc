@@ -1,0 +1,491 @@
+BO_ 143 Wheel_Torque_1: 8 XXX
+ SG_ Checksum_0x08F : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Alive_Counter_0x08F : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ Wheel_Torque_1_Status_STG : 12|4@1+ (1,0) [0|15] "" XXX
+ SG_ Wheel_Torque_Total_Actual : 16|16@1+ (1,-32000) [-32000|32000] "[Nm]" XXX
+ SG_ Wheel_Torque_Total_Actual_Qualifier : 32|4@1+ (1,0) [0|15] "" XXX
+ SG_ Wheel_Torque_Total_Actual_Sum_Error_Amplitude : 36|12@1+ (4,0) [0|16000] "[Nm]" XXX
+ SG_ Powertrain_Gain : 48|12@1+ (0.125,0) [0|511.75] "" XXX
+ SG_ Powertrain_Reinforcement_Qualifier : 60|4@1+ (1,0) [0|15] "" XXX
+
+BO_ 149 Unknown2: 8 XXX
+
+BO_ 150 Highbeam_assist: 8 BDC
+ SG_ NEW_SIGNAL_1 : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ idfk_man : 23|16@0+ (1,-20000) [0|65535] "" XXX
+
+BO_ 160 Request_Torque_Crankshaft_gearbox_2: 8 XXX
+ SG_ Checksum_0x0A0 : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Alive_Counter_0x0A0 : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ Trans_Target_Mode_Implementation_Driver_Request : 12|4@1+ (1,0) [0|14] "" XXX
+ SG_ Trans_Torque_Compensation_Rise : 16|12@1+ (1,-2000) [-2000|2000] "[Nm]" XXX
+ SG_ Trans_Torque_Compensation_Rise_Status : 28|2@1+ (1,0) [0|3] "" XXX
+ SG_ Trans_Torque_Protection_Limit : 32|12@1+ (0.5,-1023.5) [-1023.5|1023.5] "[Nm]" XXX
+ SG_ Trans_Index_Gear_Dynamic : 44|4@1+ (1,0) [0|15] "" XXX
+ SG_ RPM : 48|16@1+ (1,-2000) [0|65535] "" XXX
+
+BO_ 165 Engine_Torque_B1: 8 DME1
+ SG_ Checksum_0x0A5 : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Alive_Counter_0x0A5 : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ Engine_Torque : 16|12@1+ (0.5,-1023.5) [-1023.5|1023.5] "[Nm]" XXX
+ SG_ Engine_Torque_DME_EGS : 28|12@1+ (0.5,-1023.5) [-1023.5|1023.5] "[Nm]" XXX
+ SG_ RPM : 40|16@1+ (0.25,0) [0|10000] "/min" XXX
+ SG_ Engine_Speed_Qualifier : 56|4@1+ (1,0) [0|15] "" XXX
+
+BO_ 166 Engine_Torque_B2: 8 DME2
+ SG_ Checksum_0x0A6 : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Alive_Counter_0x0A6 : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ Engine_Torque_Minimum : 12|12@1+ (0.5,-1023.5) [-1023.5|1023.5] "[Nm]" XXX
+ SG_ Engine_Torque_Maximum : 24|12@1+ (0.5,-1023.5) [-1023.5|1023.5] "[Nm]" XXX
+ SG_ Engine_Torque_Reserve_Negative : 36|12@1+ (0.5,-1023.5) [-1023.5|1023.5] "[Nm]" XXX
+ SG_ Engine_Torque_Reserve_Positive : 48|12@1+ (0.5,-1023.5) [-1023.5|1023.5] "[Nm]" XXX
+
+BO_ 167 Engine_Torque_B3: 8 XXX
+ SG_ Checksum_0x0A7 : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Alive_Counter_0x0A4 : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ Engine_Torque_Driver_Request : 12|12@1+ (0.5,-1023.5) [-1023.5|1023.5] "[Nm]" XXX
+ SG_ Trans_Operating_Mode_Request_FAS : 24|4@1+ (1,0) [0|15] "" XXX
+ SG_ Trans_Lock_Request_Qualifier : 28|4@1+ (1,0) [0|15] "" XXX
+ SG_ Wheel_Torque_SOII_Drivetrain_Sum_Coordinated : 32|16@1+ (1,-32000) [-32000|32000] "[Nm]" XXX
+ SG_ Trans_Traction_Target_Intervention : 48|4@1+ (1,0) [0|15] "" XXX
+
+BO_ 176 EGS_Torque_Request: 8 XXX
+ SG_ Checksum_0x0B0 : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Alive_Counter_0x0B0 : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ Trans_Target_Crankshaft_Torque_Slow : 12|12@1+ (0.5,-1023.5) [-1023.5|1023.5] "[Nm]" XXX
+ SG_ Trans_Target_Crankshaft_Torque_Fast : 24|12@1+ (0.5,-1023.5) [-1023.5|1023.5] "[Nm]" XXX
+ SG_ Trans_Crankshaft_Torque_Input : 36|12@1+ (0.5,-1023.5) [-1023.5|1023.5] "[Nm]" XXX
+ SG_ Trans_Torque_Request : 48|4@1+ (1,0) [0|15] "" XXX
+ SG_ Trans_Target_Engine_Speed : 52|12@1+ (2.5,0) [0|10230] "[rpm]" XXX
+
+BO_ 182 NEW_MSG_B6: 8 XXX
+ SG_ NEW_SIGNAL_1 : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ NEW_SIGNAL_2 : 11|4@0+ (1,0) [0|15] "" XXX
+ SG_ Engine_Torque_Minimumcopy : 12|12@1+ (0.5,-1023.5) [0|4095] "" XXX
+ SG_ Engine_Torque_Maximumcopy : 24|12@1+ (0.5,-1023.5) [0|4095] "" XXX
+ SG_ Engine_Torque_Reserve_Negativecopy : 36|12@1+ (0.5,-1023.5) [0|4095] "" XXX
+ SG_ Engine_Torque_Reserve_Positivecopy : 48|12@1+ (0.5,-1023.5) [0|4095] "" XXX
+
+BO_ 215 Alive_Counter_Safety: 2 ACSM
+
+BO_ 217 Throttle_Pedal_Position: 8 XXX
+ SG_ Checksum_0x0D9 : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Alive_Counter_0x0D9 : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ Pedal_Status : 12|4@1+ (1,0) [0|15] "" XXX
+ SG_ Pedal_Pos : 16|12@1+ (0.025,0) [0|65535] "" XXX
+ SG_ Pedal_Status_Qualifier : 28|4@1+ (1,0) [0|15] "" XXX
+ SG_ Pedal_Pos_Virtual : 32|12@1+ (0.025,0) [0|4095] "" XXX
+ SG_ Pedal_Pos_Gradient : 44|12@1+ (4,-8188) [-8187|8188] "[%/s]" XXX
+ SG_ Driver_Assistance_System_Status_Interface : 56|4@1+ (1,0) [0|15] "" XXX
+
+BO_ 220 Wheel_Torque_4: 8 XXX
+ SG_ Checksum_0x0DC : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Alive_Counter_0x0DC : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ Wheel_Torque_4_Status_STG : 12|4@1+ (1,0) [0|15] "" XXX
+ SG_ Driver_Request_Status : 16|4@1+ (1,0) [0|15] "" XXX
+ SG_ Rear_Axle_Speed_Redundant_Qualifier : 20|4@1+ (1,0) [0|15] "" XXX
+ SG_ Rear_Axle_Speed_Redundant : 24|16@1+ (1,-2000) [-2000|14000] "" XXX
+ SG_ Powertrain_Status_DMEPT1 : 40|4@1+ (1,0) [0|15] "" XXX
+
+BO_ 228 Ride_height: 8 XXX
+
+BO_ 233 NEW_MSG_E9: 8 XXX
+ SG_ NEW_SIGNAL_1 : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ NEW_SIGNAL_2 : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ Pedal_Statuscopy : 12|4@1+ (1,0) [0|15] "" XXX
+ SG_ Pedal_Poscopy : 16|12@1+ (0.025,0) [0|4095] "" XXX
+ SG_ Pedal_Status_Qualifiercopy : 28|4@1+ (1,0) [0|15] "" XXX
+ SG_ Pedal_Pos_Virtualcopy : 32|12@1+ (0.025,0) [0|4095] "" XXX
+ SG_ Pedal_Pos_Gradientcopy : 44|12@1+ (4,-8188) [0|4095] "" XXX
+ SG_ Driver_Assistance_System_Status_Interfacecopy : 59|4@0+ (1,0) [0|15] "" XXX
+
+BO_ 239 Braking_torque: 8 XXX
+ SG_ Braking1 : 16|16@1+ (1,0) [0|65535] "" XXX
+ SG_ Braking2 : 40|16@1+ (1,0) [0|65535] "" XXX
+
+BO_ 243 Drivetrain_Speed: 8 XXX
+ SG_ Checksum_0x0F3 : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Alive_Counter_0x0F3 : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ Display_Engine_Crankshaft_Speed : 12|12@1+ (10,0) [0|12000] "" XXX
+ SG_ Display_Target_Gear_Drive : 24|4@1+ (1,0) [0|15] "" XXX
+ SG_ Display_Switching_Instruction_Drive : 28|2@1+ (1,0) [0|3] "" XXX
+ SG_ Display_Power_Relative_Recuperation_IGR : 32|4@1+ (10,0) [0|100] "" XXX
+
+BO_ 248 Basic_Data: 8 XXX
+ SG_ Alive_Display_RPM_Engine : 0|4@1+ (1,0) [0|14] "" XXX
+ SG_ Trans_Display_Engine_Speed : 4|12@1+ (10,0) [0|12000] "[rpm]" XXX
+ SG_ Trans_Request_Dynamization_Speed_Motor : 16|2@1+ (1,0) [0|3] "" XXX
+
+BO_ 303 Terminal_status: 8 XXX
+ SG_ NEW_SIGNAL_5 : 12|4@1+ (1,0) [0|15] "" XXX
+ SG_ NEW_SIGNAL_6 : 19|4@0+ (1,0) [0|15] "" XXX
+ SG_ NEW_SIGNAL_4 : 20|4@1+ (1,0) [0|15] "" XXX
+ SG_ NEW_SIGNAL_3 : 28|4@1+ (1,0) [0|15] "" XXX
+ SG_ NEW_SIGNAL_2 : 32|4@1+ (1,0) [0|15] "" XXX
+ SG_ In_Park : 42|1@0+ (1,0) [0|1] "" XXX
+ SG_ Startstop_button : 44|1@0+ (1,0) [0|1] "" XXX
+ SG_ Start_button_pressed : 47|1@0+ (1,0) [0|1] "" XXX
+ SG_ Brake_Lights : 48|4@1+ (1,0) [0|15] "" XXX
+ SG_ NEW_SIGNAL_1 : 52|4@1+ (1,0) [0|15] "" XXX
+ SG_ NEW_SIGNAL_8 : 56|1@0+ (1,0) [0|1] "" XXX
+
+BO_ 309 EKP_Crash_Disengagement: 8 XXX
+
+BO_ 311 LPFP: 8 XXX
+ SG_ LPFP_Operating_Mode : 0|2@1+ (1,0) [0|3] "" XXX
+ SG_ LPFP_Demand_Engine_Pressure_Controlled : 8|8@1+ (0.393701,0) [0|254] "%" XXX
+
+BO_ 315 Fuel_Enrichment_Guess: 8 XXX
+
+BO_ 316 Speed_Correction: 8 XXX
+
+BO_ 325 Wheel_Torque_3: 8 XXX
+ SG_ Checksum_0x145 : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Alive_Counter_0x145 : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ Wheel_Torque_3_Status_STG : 12|4@1+ (1,0) [0|15] "" XXX
+ SG_ Wheel_Torque_Total_Actual_Recuperation_Maximum : 16|16@1+ (1,-32000) [-32000|32000] "[Nm]" XXX
+ SG_ Wheel_Torque_Total_Actual_Drag_Lower : 32|16@1+ (1,-32000) [-32000|32000] "[Nm]" XXX
+ SG_ Wheel_Torque_Sum_Drag_Upper : 48|16@1+ (1,-32000) [-32000|32000] "[Nm]" XXX
+
+BO_ 355 Gyro: 8 XXX
+ SG_ Pitch : 16|16@1+ (-0.1,947) [0|65535] "" XXX
+ SG_ Roll : 32|16@1+ (0.1,-537) [0|65535] "" XXX
+
+BO_ 371 DSC_status: 8 XXX
+ SG_ DSC_Enabled_2 : 27|4@0+ (1,0) [0|15] "" XXX
+ SG_ NEW_SIGNAL_2 : 28|4@1+ (1,0) [0|15] "" XXX
+ SG_ DSC_Enabled : 51|4@0+ (1,0) [0|15] "" XXX
+ SG_ NEW_SIGNAL_1 : 59|4@0+ (1,0) [0|15] "" XXX
+ SG_ Shift_safety_guess : 63|4@0+ (1,0) [0|15] "" XXX
+
+BO_ 397 Veh_Dynamics_Estimated: 8 XXX
+
+BO_ 398 Nominal_current_servotronic_ECO: 8 XXX
+ SG_ NEW_SIGNAL_1 : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ NEW_SIGNAL_3 : 15|8@0+ (1,0) [0|255] "" XXX
+
+BO_ 399 Steering_Angle_Actual: 5 XXX
+ SG_ NEW_SIGNAL_1 : 0|16@1+ (0.045,-1475) [0|65535] "" XXX
+
+BO_ 407 Shifter_Status: 8 XXX
+ SG_ NEW_SIGNAL_1 : 4|3@1+ (1,0) [0|7] "" XXX
+ SG_ Intended_Shift : 12|3@1+ (1,0) [0|7] "" XXX
+ SG_ Stick_Position : 20|3@1+ (1,0) [0|7] "" XXX
+ SG_ Park_Pressed : 24|6@1+ (0.05,0) [0|63] "" XXX
+
+BO_ 408 NEW_MSG_198: 8 XXX
+
+BO_ 409 Accelerometer_Longitudinal: 8 XXX
+ SG_ Longitudinal_accel : 16|16@1+ (0.0002,-6.5) [0|255] "" XXX
+
+BO_ 410 Accelerometer_Lateral: 8 XXX
+ SG_ Lateral_accel : 16|16@1+ (0.0002,-6.47) [0|65535] "" XXX
+
+BO_ 411 Crash_Control: 8 XXX
+
+BO_ 415 Yaw_Rate: 8 XXX
+ SG_ G_Sensing : 16|16@1+ (1,0) [0|65535] "" XXX
+
+BO_ 417 Speed: 8 XXX
+ SG_ Vehicle_speed : 16|16@1+ (0.015625,0) [0|350] "Kph" XXX
+
+BO_ 430 status_of_exterior_light_operation: 2 BDC
+
+BO_ 431 Transmission_Data: 8 XXX
+ SG_ Checksum_0x1AF : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Alive_Counter_0x1AF : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ Trans_Gain : 12|12@1+ (0.125,0) [0|511.75] "[1/m]" XXX
+ SG_ Trans_Speed_Input : 24|16@1+ (1,-2000) [-2000|14000] "rpm" XXX
+ SG_ Trans_Speed_Output : 40|16@1+ (1,-2000) [-2000|14000] "" XXX
+ SG_ Trans_Loss_of_Torque_Output : 56|8@1+ (2,0) [0|508] "[Nm]" XXX
+
+BO_ 435 Kombi_Status_Display: 8 KOMBI
+
+BO_ 441 Thermal_Managment_Engine_Control: 4 XXX
+ SG_ Crankshaft_Torque_Limit_Air_Conditioning_Compressor : 0|8@1+ (1,0) [0|30] "" XXX
+ SG_ Status_Heatflow_DME : 8|8@1+ (0.5,0) [0|100] "%" XXX
+
+BO_ 442 Energy_Generation_Status: 8 XXX
+ SG_ Generator_Load : 7|8@0+ (1,0) [0|255] "%" XXX
+ SG_ Generator_Current : 15|8@0+ (1,0) [0|255] "[A]" XXX
+
+BO_ 494 HighBeam: 8 XXX
+
+BO_ 502 Indicators: 8 XXX
+ SG_ Turn_Signal_Remain : 0|2@1+ (1,0) [0|3] "" XXX
+ SG_ Turn_Signal : 4|2@1+ (1,0) [0|3] "" XXX
+ SG_ Stalk_position : 9|2@0+ (1,0) [0|3] "" XXX
+
+BO_ 508 Active_Steering: 8 XXX
+
+BO_ 514 Dimming: 8 XXX
+
+BO_ 519 NEW_MSG_207: 2 XXX
+ SG_ NEW_SIGNAL_1 : 12|4@1+ (1,0) [0|15] "" XXX
+
+BO_ 531 Status_Heads_Up_Display_2: 4 HUD
+
+BO_ 538 Lamp_Status: 8 XXX
+
+BO_ 549 NEW_MSG_225: 4 XXX
+
+BO_ 575 NEW_MSG_23F: 4 XXX
+
+BO_ 582 Air_Condition_Status: 5 IHKA
+ SG_ NEW_SIGNAL_2 : 11|2@0+ (1,0) [0|3] "" XXX
+ SG_ NEW_SIGNAL_1 : 23|8@0+ (1,0) [0|255] "" XXX
+
+BO_ 595 Torque_wish: 8 XXX
+ SG_ Driver_torque_wish : 23|8@0+ (6,0) [0|255] "" XXX
+
+BO_ 596 Wheel_Speed: 8 XXX
+ SG_ Wheel_Speed_LR : 0|16@1+ (0.015625,-511.98001) [0|65535] "Rad/s" XXX
+ SG_ Wheel_Speed_RR : 16|16@1+ (0.015625,-511.98001) [0|65535] "" XXX
+ SG_ Wheel_Speed_LF : 32|16@1+ (0.015625,-511.98001) [0|65535] "" XXX
+ SG_ Wheel_Speed_RF : 48|16@1+ (0.015625,-511.98001) [0|65535] "" XXX
+
+BO_ 641 Battery_Voltage: 2 XXX
+ SG_ Voltage_Measured : 3|12@0+ (1,0) [0|16000] "[mv]" XXX
+
+BO_ 647 Traffic_Sign: 8 XXX
+
+BO_ 649 Display_Longitudinal_Dynamics_Management_2: 8 ICM
+
+BO_ 652 NEW_MSG_28C: 4 XXX
+ SG_ NEW_SIGNAL_1 : 7|8@0+ (1,0) [0|255] "" XXX
+ SG_ NEW_SIGNAL_2 : 21|1@0+ (1,0) [0|1] "" XXX
+
+BO_ 663 Occupancy: 8 XXX
+ SG_ Driver_Seatbelt : 16|1@0+ (1,0) [0|1] "" XXX
+
+BO_ 677 Environment_Brightness: 8 XXX
+ SG_ NEW_SIGNAL_1 : 15|8@0+ (1,0) [0|255] "" XXX
+
+BO_ 679 Driving_Dynamics_Check_Control: 8 XXX
+
+BO_ 699 Vehicle_Distnce: 8 XXX
+
+BO_ 708 Fuel_Consuption: 8 XXX
+ SG_ Fuel_Injection_Quantity : 0|16@1+ (1,0) [0|65535] "ul" XXX
+
+BO_ 709 Driving_Dynamics_Status_Display: 7 KOMBI
+ SG_ NEW_SIGNAL_1 : 16|16@1+ (1,0) [0|65535] "" XXX
+
+BO_ 714 Ambient_Temperature: 8 XXX
+ SG_ Ambient_temp : 0|8@1+ (0.5,-40) [0|255] "C" XXX
+
+BO_ 736 NEW_MSG_2E0: 6 XXX
+
+BO_ 752 AC_interface: 8 XXX
+
+BO_ 764 Central_Locking_and_Lid: 8 XXX
+ SG_ Driver_Door : 8|1@0+ (1,0) [0|1] "" XXX
+
+BO_ 769 Actual_Steering_Angle: 7 ICM
+
+BO_ 770 Steering_Angle: 8 XXX
+ SG_ Steering_Angle : 16|16@1+ (1,0) [0|65535] "" XXX
+
+BO_ 779 Engine_Start_Stop: 8 XXX
+ SG_ Checksum_0x30B : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Alive_Counter_0x30B : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ Engine_Start_Request_MSA : 12|2@1+ (1,0) [0|3] "" XXX
+ SG_ Engine_Start_Request_MSA_2 : 14|2@1+ (1,0) [0|3] "" XXX
+ SG_ Trans_Target_Power : 16|2@1+ (1,0) [0|3] "" XXX
+ SG_ MSA_Status : 18|2@1+ (1,0) [0|3] "" XXX
+ SG_ Engine_Shutdown_Prevention_Reason : 20|4@1+ (1,0) [0|15] "" XXX
+ SG_ Engine_Stop_MSA_Status : 24|3@1+ (1,0) [0|7] "" XXX
+ SG_ Engine_Start_Stop_MSA_Possibility : 27|3@1+ (1,0) [0|7] "" XXX
+ SG_ Engine_Start_Type_Default : 30|4@1+ (1,0) [0|15] "" XXX
+
+BO_ 788 Headight_Status: 8 XXX
+
+BO_ 807 Lane_Departure_Warning_System: 5 KAFAS
+
+BO_ 808 Uptime: 8 XXX
+ SG_ Uptime_seconds : 4|12@1+ (1,-2940) [0|4095] "" XXX
+
+BO_ 816 Fuel_data: 8 XXX
+
+BO_ 821 Fuel_Pump_Status: 8 XXX
+ SG_ NEW_SIGNAL_1 : 12|12@1+ (0.1,-115) [0|4095] "" XXX
+ SG_ NEW_SIGNAL_3 : 24|16@1+ (0.01,-230) [0|65535] "" XXX
+ SG_ NEW_SIGNAL_2 : 40|24@1+ (0.0001,-450) [0|16777215] "" XXX
+
+BO_ 827 Display_Longitudinal_Dynamics_Management_22: 6 DSC
+
+BO_ 839 Steering_Wheel_Vibration: 3 DSC
+
+BO_ 841 Fuel_Tank_Level: 8 XXX
+ SG_ NEW_SIGNAL_2 : 0|12@1+ (1,0) [0|4095] "" XXX
+ SG_ NEW_SIGNAL_1 : 16|12@1+ (1,0) [0|4095] "" XXX
+
+BO_ 873 Tire_Status: 8 XXX
+
+BO_ 874 Highbeam_assistance: 8 XXX
+
+BO_ 878 display_check_control_bypass: 5 DSC
+
+BO_ 879 Display_Check_Control_Bypass_DSC: 5 DSC
+
+BO_ 894 Brake_Temperature: 6 EMF
+
+BO_ 915 LCD_Brightness: 4 KOMBI
+
+BO_ 918 OBD_transmission_diag: 8 XXX
+ SG_ MIL_Diagnostic_OBD_Trans_Request : 0|2@1+ (1,0) [0|3] "" XXX
+
+BO_ 919 OBD_Diagnostic_Engine: 8 DME1
+ SG_ OBD_Cycle_Status : 0|6@1+ (1,0) [0|63] "" XXX
+ SG_ OBD_Throttle_Pos : 8|8@1+ (0.3937,0) [0|100] "%" XXX
+ SG_ OBD_Engine_Load : 16|8@1+ (0.3937,0) [0|100] "%" XXX
+
+BO_ 922 Gearbox_Control_Status: 8 XXX
+ SG_ Req_Idle_Up : 0|8@1+ (8,0) [0|2032] "revs/min" XXX
+ SG_ Gearbox_temp : 8|8@1+ (1,-40) [-40|170] "C" XXX
+ SG_ Trans_Cooling_Req : 16|2@1+ (1,0) [0|3] "" XXX
+ SG_ Trans_Control_Unit_Status : 18|2@1+ (1,0) [0|3] "" XXX
+ SG_ Trans_Shift_Active : 21|2@0+ (1,0) [0|15] "" XXX
+ SG_ Trans_Start_Torque_Limit_Status : 22|2@1+ (1,0) [0|3] "" XXX
+ SG_ Trans_Selected_Gear : 27|4@0+ (1,0) [0|15] "" XXX
+ SG_ Trans_Mode : 28|1@0+ (1,0) [0|1] "" XXX
+ SG_ Trans_EGS_DKG : 29|3@1+ (1,0) [0|7] "" XXX
+ SG_ Trans_Starter_Lock : 32|2@1+ (1,0) [0|3] "" XXX
+ SG_ Trans_Start_Clutch_Status : 37|3@1+ (1,0) [0|7] "" XXX
+ SG_ Trans_Torque_Converter_Status : 40|4@1+ (1,0) [0|15] "" XXX
+ SG_ Trans_Forced_Upshift : 44|2@1+ (1,0) [0|3] "" XXX
+ SG_ Trans_Bus_Communication_Selection_Trans_Engine : 46|2@1+ (1,0) [0|3] "" XXX
+
+BO_ 928 Vehicle_Status: 8 XXX
+ SG_ Starting : 56|1@0+ (1,0) [0|1] "" XXX
+
+BO_ 935 Driving_Dynamics_Switch: 8 XXX
+
+BO_ 972 NEW_MSG_3CC: 7 XXX
+
+BO_ 1017 Powertrain_Data_2: 8 XXX
+ SG_ Checksum_0x3F9 : 0|8@1+ (1,0) [0|255] "" XXX
+ SG_ Alive_Counter_0x3F9 : 8|4@1+ (1,0) [0|15] "" XXX
+ SG_ Powertrain_Data_Status_ECU_2 : 12|4@1+ (1,0) [0|15] "" XXX
+ SG_ Vehicle_Drive_Status : 16|8@1+ (1,0) [0|255] "" XXX
+ SG_ Engine_Running_Status : 24|2@1+ (1,0) [0|3] "" XXX
+ SG_ Clutch_Switch_Status : 26|2@1+ (1,0) [0|3] "" XXX
+ SG_ Starter_Drive_Lock_Status_Engine : 28|2@1+ (1,0) [0|3] "" XXX
+ SG_ Engine_Drive_Status : 30|2@1+ (1,0) [0|3] "" XXX
+ SG_ Engine_Temperature : 32|8@1+ (1,-48) [-48|144] "[C]" XXX
+ SG_ Engine_Temperature_Oil : 40|8@1+ (1,-48) [-48|170] "[C]" XXX
+ SG_ Engine_Gear_Selection_Status : 51|4@0+ (1,0) [0|15] "" XXX
+ SG_ Engine_Enable_Start : 52|2@1+ (1,0) [0|3] "" XXX
+ SG_ Reduction_Speed_Limiter_Drive_2 : 54|2@1+ (1,0) [0|3] "" XXX
+
+BO_ 1019 Powertrain_Data_1: 8 XXX
+ SG_ Engine_Air_Pressure : 0|8@1+ (1,0) [600|1106] "[hPa]" XXX
+ SG_ Engine_Idle_Speed_Target : 8|8@1+ (1,0) [0|1270] "" XXX
+ SG_ Engine_Warm_Up_Switch : 16|2@1+ (1,0) [0|3] "" XXX
+ SG_ Reduction_Speed_Limiter_Drive : 18|2@1+ (1,0) [0|3] "" XXX
+ SG_ Shift_Point_Adaption_Request_Trans_Particulate_Filter_Regeneration : 20|2@1+ (1,0) [0|3] "" XXX
+ SG_ Engine_Communication_Bus_Selection_Trans : 22|2@1+ (1,0) [0|3] "" XXX
+ SG_ Engine_Start_Assist_Request : 27|4@0+ (1,0) [0|15] "" XXX
+ SG_ Shiftlock : 28|2@1+ (1,0) [0|3] "" XXX
+ SG_ Rotational_Non_Uniformity_Status : 30|2@1+ (1,0) [0|3] "" XXX
+ SG_ Engine_Overrun_Cutoff_Status : 32|2@1+ (1,0) [0|3] "" XXX
+ SG_ Trans_Shift_Point_Adjustment_Demand_Load_Balance : 34|2@1+ (1,0) [0|3] "" XXX
+ SG_ Engine_Idle_Speed_Extended : 40|8@1+ (1,0) [0|2540] "" XXX
+
+BO_ 1021 Shifter_data: 8 XXX
+ SG_ Trans_in_fwd_gear : 15|4@0+ (1,0) [0|15] "" XXX
+ SG_ Trans_Program_Display : 18|3@0+ (1,0) [0|15] "" XXX
+ SG_ Trans_Position_Display : 23|3@0+ (1,0) [0|15] "" XXX
+
+BO_ 1296 ZGW_Network_Management: 8 XXX
+
+BO_ 1298 Network_Management: 8 XXX
+
+BO_ 1304 Lights_guess: 8 XXX
+ SG_ NEW_SIGNAL_1 : 32|4@1+ (1,0) [0|15] "" XXX
+ SG_ NEW_SIGNAL_2 : 36|4@1+ (1,0) [0|15] "" XXX
+
+BO_ 1374 GWS_heartbeat: 8 XXX
+
+BO_ 1376 Kombi_Network_Management: 8 XXX
+
+BO_ 1432 Launch_Control: 8 XXX
+
+BO_ 1504 OBD_stats: 8 KOMBI
+
+CM_ SG_ 311 LPFP_Demand_Engine_Pressure_Controlled "Multiply by 2.54 for L/h";
+VAL_ 143 Wheel_Torque_1_Status_STG 0 "Initializing" 1 "Normal Operation" 2 "Normal Operation / Overvoltage sensed" 3 "Normal Operation / Undervoltage sensed" 4 "Diagnostic State" 5 "Diagnostic State / Overvoltage sensed" 6 "Diagnostic State / Undervoltage sensed" 7 "Powerdown State" 8 "Powersave State" 9 "Not Available State" 10 "Reset State" 15 "Signal Invalid";
+VAL_ 143 Wheel_Torque_Total_Actual_Qualifier 8 "Initialization" 1 "Signal Valid, Trusted, and Plausible. Permanent" 9 "Signal Valid and Trusted. Temporary" 2 "Signal Valid. Permanent" 10 "Signal Valid. Temporary" 3 "Signal not Trusted. Permanent" 11 "Signal not Trusted. Temporary" 4 "Substitute Value Set. Permanent" 12 "Substitute Value Set. Temporary" 6 "Signal Invalid. Permanent" 14 "Signal Invalid. Temporary" 7 "Sensor not Present" 15 "Signal Invalid";
+VAL_ 143 Powertrain_Reinforcement_Qualifier 8 "Initializing" 1 "Signal Valid, Trusted, Validated. Permanent" 9 "Signal Valid, Trusted. Temporary" 2 "Signal Valid. Permanent" 10 "Signal Valid. Temporary" 3 "Signal not Trusted. Permanent" 11 "Signal not Trusted. Temporary" 4 "Substitute value set. Permanent" 12 "Substitute value set. Temporary" 6 "Signal Invalid. Permanent" 14 "Signal Invalid. Temporary" 7 "Sensor not Present" 15 "Signal Invalid";
+VAL_ 160 Trans_Torque_Compensation_Rise_Status 0 "Valid Value" 1 "Invalid Value" 2 "Restricted Valid Value";
+VAL_ 165 Engine_Speed_Qualifier 8 "Initialization" 1 "Signal Valid and Trusted - Permanent" 9 "Signal Valid and Trusted - Temporary" 2 "Signal is Valid - Permanent" 10 "Signal is Valid - Temporary" 3 "Signal not trusted - Permanent" 11 "Signal not trusted - Temporary" 4 "Substitute value set - Permanent" 12 "Substitute value set - Temporary" 6 "Signal invalid - Permanent" 14 "Signal invalid - Temporary" 7 "Sensor not Present" 15 "Signal Invalid";
+VAL_ 167 Trans_Operating_Mode_Request_FAS 0 "Dynamic Operating Mode Transmission" 1 "Other-";
+VAL_ 167 Trans_Lock_Request_Qualifier 8 "Initialization" 2 "Drivetrain Lock" 14 "No Drivetrain Lock" 7 "Setpoint Not Available" 15 "Invalid Signal";
+VAL_ 167 Trans_Traction_Target_Intervention 0 "No Request" 1 "High Drivetrain Gain Desired" 2 "Avoid Load Changes" 3 "Load Reduction to Increase Vehicle Stability" 15 "Signal Invalid";
+VAL_ 176 Trans_Torque_Request 0 "No Torque Request" 1 "Torque Increase" 2 "Torque Reduction - EZA remains an internal engine decision" 3 "Speed Control - DCT - EGS optional" 4 "Torque Limiting Request - DCT only" 5 "Engine Stop Request - DCT only" 6 "Creep - DCT" 7 "TAR_TORQ_CRSH_SLOW with Anticipatory Torque Intervention" 8 "Torque Reduction with EZA Allowed" 9 "Torque Reduction with EZA Prohibited" 10 "Speed Control EME Only req with in Hybrid GEN2 and higher" 11 "Speed Control EME - Torque Increase Hgen2+" 12 "Speed Control EME - Torque Reduction Hgen2+" 15 "Invalid Signal";
+VAL_ 217 Pedal_Status 0 "Initialization State" 1 "Normal Operation" 2 "Normal - Overvoltage Sensed" 3 "Normal - Undervoltage Sensed" 4 "Diagnostic State" 5 "Diagnostic/Overvoltage Sensed" 6 "Diagnostic/Undervoltage Sensed" 7 "Power Down State" 8 "Power Save State" 9 "Unavailable State" 10 "Reset State";
+VAL_ 217 Pedal_Status_Qualifier 1 "Signal is valid and secured. Permanent State/Status" 8 "Initialization" 2 "Signal is valid, not secured. Permanent State/Status" 9 "Signal is valid and secured. Temporary State/Status" 10 "Signal is valid, not secured. Temporary State/Status" 3 "Signal is not trusted. Permanent State/Status" 11 "Signal is not trusted. Temporary State/Status" 4 "Substitute value is set in the data signal. Permanent State/Status" 12 "Substitute value is set in the data signal. Temporary State/Status" 6 "Signal value is invalid. Permanent State/Status" 14 "Signal value is invalid. Temporary State/Status" 7 "Sensor not present";
+VAL_ 217 Driver_Assistance_System_Status_Interface 0 "No Pedal Request, No AAS Request" 1 "Pedal Request, No AAS Request" 2 "No Pedal Request, AAS Request" 3 "Pedal Request > AAS Request" 7 "Pedal Request < AAS Request" 8 "Initialization" 15 "Invalid Signal";
+VAL_ 220 Wheel_Torque_4_Status_STG 0 "Initialization State" 1 "Normal Operation" 2 "Normal Operation/Overvoltage Sensed" 3 "Normal Operation/Undervoltage Sensed" 4 "Diagnostic State" 5 "Diagnostic/Overvoltage Sensed" 6 "Diagnostic/Undervoltage Sensed" 7 "Powerdown State" 8 "Power Save State" 9 "Not Available" 10 "Reset State" 15 "Invalid Signal";
+VAL_ 220 Driver_Request_Status 0 "Initialization" 2 "No Direction Request" 4 "Forward Direction Request" 5 "Reverse Direction Request" 15 "Invalid Signal";
+VAL_ 220 Rear_Axle_Speed_Redundant_Qualifier 1 "Signal is Valid, secured, and validated. Permanent state/status." 2 "Signal is Valid. Permanent state/status." 3 "Signal is not trusted. Permanent state/status." 4 "Substitute signal is set. Permanent state/status." 6 "Signal is invalid. Permanent state/status." 7 "Sensor not present" 8 "Initalization" 9 "Signal is Valid, secured, and validated. Temporary state/status." 10 "Signal is Valid. Temporary state/status." 11 "Signal is not trusted. Temporary state/status." 12 "Substitute signal is set. Temporary state/status." 14 "Signal is invalid. Temporary state/status." 15 "Signal Invalid";
+VAL_ 220 Powertrain_Status_DMEPT1 0 "Initalization" 1 "No power transmission information available" 4 "Full power transmission drive wheel" 8 "Partial power transmission drive wheel, automatic shifting active" 9 "Partial power transmission drive wheel, manual shifting active" 12 "No power transmission drive wheel, disengaged" 13 "No power transmission drive wheel, manual shifting active" 14 "No power transmission drive wheel, power transmission drive - body" 15 "Signal Invalid";
+VAL_ 243 Display_Target_Gear_Drive 0 "Display off" 1 "Target Gear 1" 2 "Target Gear 2" 3 "Target Gear 3" 4 "Target Gear 4" 5 "Target Gear 5" 6 "Target Gear 6" 7 "Target Gear 7" 8 "Target Gear 8" 15 "Signal Invalid";
+VAL_ 243 Display_Switching_Instruction_Drive 0 "Display off" 1 "Downshift Instruction" 2 "Upshift Instruction" 3 "Signal Invalid";
+VAL_ 248 Trans_Request_Dynamization_Speed_Motor 0 "No Dynamization Requested" 1 "Dynamization Requested" 3 "Signal Invalid";
+VAL_ 303 Brake_Lights 0 "No" 3 "Yes";
+VAL_ 311 LPFP_Operating_Mode 0 "Volume Controlled" 1 "Pressure Controlled" 2 "Bit, Multiplexer";
+VAL_ 371 DSC_Enabled_2 0 "DSC ON" 1 "DSC FULLY OFF";
+VAL_ 371 DSC_Enabled 0 "DSC ON" 2 "DSC FULLY OFF";
+VAL_ 407 Intended_Shift 0 "Rest" 1 "Reverse" 2 "Neutral" 3 "Drive" 6 "Sport" 5 "Upshift" 4 "Downshift";
+VAL_ 407 Stick_Position 0 "Rest" 1 "Push 1" 2 "Push 2" 3 "Pull 1" 4 "Pull 2" 7 "Sport/Left" 6 "Upshift" 5 "Downshift";
+VAL_ 407 Park_Pressed 0 "Not Pressed" 1 "Pressed";
+VAL_ 502 Turn_Signal_Remain 0 "No - Off" 1 "Yes - On";
+VAL_ 502 Turn_Signal 0 "Off" 1 "Left" 2 "Right";
+VAL_ 502 Stalk_position 0 "Rest" 1 "Pos 1" 2 "Pos 2";
+VAL_ 663 Driver_Seatbelt 0 "Unbuckled" 1 "Buckled";
+VAL_ 764 Driver_Door 0 "Closed" 1 "Open";
+VAL_ 779 Engine_Start_Request_MSA 0 "Initializing" 1 "Do not Start Engiine" 2 "Start Engine" 3 "Invalid Signal";
+VAL_ 779 Engine_Start_Request_MSA_2 0 "Initializing" 1 "Do not Start" 2 "Start Engine" 3 "Invalid Signal";
+VAL_ 779 Trans_Target_Power 0 "No Power Transmission" 1 "Transmission Power" 3 "Invalid Signal";
+VAL_ 779 MSA_Status 0 "MSA Disabled" 1 "MSA Enabled" 3 "Invalid Signal";
+VAL_ 779 Engine_Shutdown_Prevention_Reason 0 "No Shutdown Prevention" 1 "Engine Start Forced by Driver" 2 "VM is running due to comfort request" 3 "VM is running due to battery charge status" 4 "VM is running due to low engine temperature" 5 "VM is running due to high engine temperature" 6 "VM is running due to low high-voltage battery temperature" 7 "VM is running due to high temperature in the hybrid system" 8 "VM is running due to system requirements" 15 "Invalid Signal";
+VAL_ 779 Engine_Stop_MSA_Status 0 "Initializing" 2 "Switch-off preventer ON" 3 "Switch-on preventer ON" 4 "Motor Off" 7 "Invalid Signal";
+VAL_ 779 Engine_Start_Stop_MSA_Possibility 0 "MSA Motor Start/Stop Possible" 1 "MSA Motor Start Possible";
+VAL_ 779 Engine_Start_Type_Default 0 "No Motor Start Requested" 1 "Start only by ZSE" 2 "Start only by EM" 3 "Start by ZSE and EM" 15 "Invalid Signal";
+VAL_ 918 MIL_Diagnostic_OBD_Trans_Request 1 "MIL OFF" 2 "MIL ON" 3 "Invalid Signal";
+VAL_ 919 OBD_Cycle_Status 0 "Warmup Cycle not Active" 1 "Warmup Cycle Active" 3 "Driving Cycle Active";
+VAL_ 922 Trans_Cooling_Req 0 "No Request" 1 "Cooling Stage 1" 2 "Cooling Stage 2" 3 "Invalid Signal";
+VAL_ 922 Trans_Control_Unit_Status 0 "No Fault" 1 "Fault Present" 2 "idk man" 3 "Invalid Signal";
+VAL_ 922 Trans_Shift_Active 0 "No" 1 "Yes" 3 "Invalid Signal";
+VAL_ 922 Trans_Start_Torque_Limit_Status 0 "No Request" 1 "Request Active" 3 "Invalid Signal";
+VAL_ 922 Trans_Selected_Gear 3 "P" 1 "N" 2 "R" 5 "1" 6 "2" 7 "3" 8 "4" 9 "5" 10 "6" 11 "7" 12 "8";
+VAL_ 922 Trans_Mode 0 "Comfort" 1 "Sport";
+VAL_ 922 Trans_EGS_DKG 0 "EGS" 1 "DKG";
+VAL_ 922 Trans_Starter_Lock 2 "Allow Start and stop - Park" 1 "Allow Start - Neutral" 0 "No Engine Start";
+VAL_ 922 Trans_Start_Clutch_Status 0 "Clutch Open (torque = 0)" 1 "Creep (Clutch slipping)" 2 "Starting Torque (torque > 0)" 3 "Clutch Closed" 4 "Controlled Continuous Slip" 5 "" 0 "" 7 "Signal Invalid";
+VAL_ 922 Trans_Torque_Converter_Status 0 "TC Open" 1 "TC Regulated Low" 2 "TC Regulated High" 3 "TC Closed Low" 4 "TC Closed High" 8 "TC Transition to Open" 9 "TC Transition to Regulated Low" 10 "TC Transition to Regulated High" 11 "TC Transition to Low" 12 "TC Transition to High" 15 "Invalid Signal";
+VAL_ 922 Trans_Forced_Upshift 0 "Forced Upshift Present" 1 "No Forced Upshift" 3 "Invalid Signal";
+VAL_ 922 Trans_Bus_Communication_Selection_Trans_Engine 0 "A-CAN (Primary)" 1 "FA-CAN" 3 "Invalid Signal";
+VAL_ 928 Starting 0 "No" 1 "Yes";
+VAL_ 1017 Powertrain_Data_Status_ECU_2 0 "Initialization State" 1 "Normal Operation State" 2 "Normal Operation/Overvoltage Sensed" 3 "Normal Operation/Undervoltage Sensed" 4 "Diagnostic State" 5 "Diagnostic State/Overvoltage Sensed" 6 "Diagnostic State/Undervoltage Sensed" 7 "Powerdown State" 8 "Powersave State" 9 "Not Available State" 10 "Reset State";
+VAL_ 1017 Vehicle_Drive_Status 130 "ICE is running" 131 "Initialization" 146 "ICE coasting down due to MSA request";
+VAL_ 1017 Engine_Running_Status 0 "Engine Off" 1 "Engine Starting" 2 "Engine Running" 3 "Invalid Signal";
+VAL_ 1017 Clutch_Switch_Status 0 "Clutch Not Engaged" 1 "Clutch Engaged" 3 "Invalid Signal / Clutch Not Present";
+VAL_ 1017 Starter_Drive_Lock_Status_Engine 0 "No Engine Start" 1 "Allow Engine Start, Trans in N" 2 "Allow Engine Start/Stop, Trans in P" 3 "Invalid Signal";
+VAL_ 1017 Engine_Drive_Status 0 "Idle" 1 "Engine Not Idling" 3 "Invalid Signal";
+VAL_ 1017 Engine_Gear_Selection_Status 3 "P" 2 "R" 1 "N" 5 "1" 6 "2" 7 "3" 8 "4" 9 "5" 10 "6" 11 "7" 12 "8";
+VAL_ 1017 Engine_Enable_Start 0 "No Engine Start" 1 "Delay Engine Start" 2 "Allow Engine Start" 3 "Invalid Signal";
+VAL_ 1017 Reduction_Speed_Limiter_Drive_2 0 "OK" 1 "Small Reduction of Limiter Speed" 2 "Large Reduction of Limiter Speed" 3 "Invalid Signal";
+VAL_ 1019 Engine_Warm_Up_Switch 0 "Engine Warming Up" 1 "Engine at Operating Temperature" 2 "Engine Overtemperature" 3 "Invalid Signal";
+VAL_ 1019 Reduction_Speed_Limiter_Drive 0 "OK" 1 "Speed Limiter Reduction" 3 "Signal Invalid";
+VAL_ 1019 Shift_Point_Adaption_Request_Trans_Particulate_Filter_Regeneration 0 "No Shift Point Adaption Requested" 1 "Shift Point Adaption Requested" 3 "Invalid Signal";
+VAL_ 1019 Engine_Communication_Bus_Selection_Trans 0 "A-CAN Init Value, Primary" 1 "FA-CAN" 3 "Invalid Signal";
+VAL_ 1019 Engine_Start_Assist_Request 0 "No Start Assist Requested" 1 "Emergency Start Assistance Requested" 2 "Normal Start Assistance Requested" 15 "Invalid Signal";
+VAL_ 1019 Shiftlock 0 "Not Allowed" 1 "No Shiftlock Request" 2 "Shiftlock Request" 3 "Invalid Signal";
+VAL_ 1019 Rotational_Non_Uniformity_Status 0 "OK" 1 "Rotational non-uniformity due to injector failure" 2 "Rotational non-uniformity without injector failure" 3 "Invalid Signal";
+VAL_ 1019 Engine_Overrun_Cutoff_Status 0 "No Influence" 1 "Overrun Cutoff Active" 2 "Non-Adjustable Range" 3 "Invalid Signal";
+VAL_ 1019 Trans_Shift_Point_Adjustment_Demand_Load_Balance 0 "No Shift Point Adjustment Requested" 1 "Shift Point Adjustment Requested" 3 "Invalid Signal";
+VAL_ 1021 Trans_in_fwd_gear 0 "P/R/N" 1 "1" 2 "2" 3 "3" 4 "4" 5 "5" 6 "6" 7 "7" 8 "8";
+VAL_ 1021 Trans_Program_Display 0 "Dark Mode" 1 "Sport" 2 "Manual" 3 "L-Program" 4 "C-Program" 7 "Invalid Signal";
+VAL_ 1021 Trans_Position_Display 0 "Dark Mode (Off)" 1 "Park" 2 "Reverse" 3 "Neutral" 4 "Drive" 7 "Invalid Signal";
