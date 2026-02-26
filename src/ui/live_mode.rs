@@ -67,7 +67,7 @@ impl Default for LiveCanConfig {
     fn default() -> Self {
         Self {
             bitrate: 500_000,
-            listen_only: true,
+            listen_only: false,
             auto_start: true,
         }
     }
