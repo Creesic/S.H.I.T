@@ -1,7 +1,8 @@
 [package]
-name = "can_viz"
+name = "shit"
 version = "0.1.0"
 edition = "2021"
+description = "Signal Harvesting & Interpretation Toolkit"
 
 [dependencies]
 # imgui and backends
