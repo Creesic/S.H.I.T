@@ -316,6 +316,25 @@ impl AppState {
         println!("Loaded {} messages", msg_count);
     }
 
+    /// Unload the currently loaded file
+    fn unload_file(&mut self) {
+        self.messages.clear();
+        self.playback = PlaybackEngine::new(Vec::new());
+        self.message_list.set_messages(Vec::new());
+        self.file_loaded = false;
+        self.initial_data_populated = false;
+
+        // Clear chart data and timeline
+        self.charts.clear_data();
+        self.charts.clear_time_range();
+
+        // Clear message stats and pattern analyzer
+        self.message_stats.clear();
+        self.pattern_analyzer.clear();
+
+        self.status_message = Some("File unloaded".to_string());
+    }
+
     /// Pre-populate chart with all decoded signal data from loaded messages
     fn populate_chart_data(&mut self) {
         let charted: Vec<String> = self.charts.charted_signals().iter().map(|s| s.to_string()).collect();
@@ -659,6 +678,12 @@ fn main() {
                             state.show_dbc_open_pending = true;
                         }
                         ui.separator();
+                        if state.file_loaded {
+                            if ui.menu_item("Unload") {
+                                state.unload_file();
+                            }
+                            ui.separator();
+                        }
                         if ui.menu_item("Exit") {
                             window_target.exit();
                         }

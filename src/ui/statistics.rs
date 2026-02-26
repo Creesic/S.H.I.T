@@ -342,6 +342,10 @@ impl PatternAnalyzer {
         ids.sort();
         ids
     }
+
+    pub fn clear(&mut self) {
+        self.patterns.clear();
+    }
 }
 
 impl Default for PatternAnalyzer {
@@ -366,6 +370,11 @@ impl PatternAnalyzerWindow {
 
     pub fn analyze(&mut self, messages: &[CanMessage]) {
         self.analyzer.analyze(messages);
+    }
+
+    pub fn clear(&mut self) {
+        self.analyzer.clear();
+        self.selected_id = None;
     }
 
     pub fn render(&mut self, ui: &Ui, is_open: &mut bool) {

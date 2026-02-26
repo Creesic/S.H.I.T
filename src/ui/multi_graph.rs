@@ -145,6 +145,12 @@ impl MultiSignalGraph {
         self.data_end_time = Some(end);
     }
 
+    /// Clear the data time range
+    pub fn clear_time_range(&mut self) {
+        self.data_start_time = None;
+        self.data_end_time = None;
+    }
+
     /// Check if a signal is charted
     pub fn has_signal(&self, name: &str) -> bool {
         self.series.contains_key(name)
