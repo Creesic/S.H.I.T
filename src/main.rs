@@ -959,12 +959,17 @@ fn main() {
                                         use std::io::Write;
                                         // Write CSV header matching 130b.csv format
                                         let _ = writeln!(file, "time,addr,bus,data");
-                                        // Write messages with sequential time values
-                                        // (not timestamp differences, to handle high-rate CAN traffic)
-                                        for (index, msg) in live_state.live_messages.iter().enumerate() {
-                                            // Use index-based time: 1ms per message for high-rate traffic
-                                            // This ensures proper playback even when timestamps are identical
-                                            let rel_time = index as f64 * 0.001;  // 1ms per message
+                                        // Get start time for relative timestamps
+                                        let start_time = live_state.live_messages.first()
+                                            .map(|m| m.timestamp);
+                                        // Write messages with actual relative time (realtime)
+                                        for msg in &live_state.live_messages {
+                                            // Calculate relative time in seconds with microsecond precision
+                                            let rel_time = if let Some(start) = start_time {
+                                                (msg.timestamp - start).num_microseconds() as f64 / 1_000_000.0
+                                            } else {
+                                                0.0
+                                            };
                                             // Data as hex string with 0x prefix
                                             let data_hex = if msg.data.is_empty() {
                                                 "0x".to_string()
@@ -973,7 +978,7 @@ fn main() {
                                                     .map(|b| format!("{:02X}", b))
                                                     .collect::<String>())
                                             };
-                                            let _ = writeln!(file, "{:.3},0x{:03X},{},{}",
+                                            let _ = writeln!(file, "{:.6},0x{:03X},{},{}",
                                                 rel_time, msg.id, msg.bus, data_hex);
                                         }
                                         state.status_message = Some(format!("Saved {} messages to {}", live_state.live_messages.len(), path.display()));

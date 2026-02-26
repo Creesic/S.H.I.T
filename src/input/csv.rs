@@ -30,23 +30,23 @@ pub fn load_csv(path: &str) -> Result<Vec<CanMessage>> {
     for result in rdr.records() {
         let record = result.context("Failed to read CSV row")?;
 
-        // Parse timestamp as relative seconds from log start
+        // Parse timestamp as relative seconds from log start (microsecond precision)
         let time_relative = record.get(time_idx).and_then(|s| s.parse::<f64>().ok())
             .unwrap_or(0.0);
 
         // Track accumulated time - handle both forward time and resets
         if time_relative < last_seen_time - 0.1 {
             // Time jumped back significantly - this is likely a new session
-            accumulated_time_secs += 0.001;  // Small increment for the new message
+            accumulated_time_secs += 0.000001;  // Small increment for the new message
         } else if time_relative > last_seen_time {
             // Time moved forward - add the difference
             accumulated_time_secs += (time_relative - last_seen_time);
         }
         last_seen_time = time_relative;
 
-        // Calculate actual timestamp
-        let ms = (accumulated_time_secs * 1000.0) as i64;
-        let timestamp = base_time + chrono::Duration::milliseconds(ms);
+        // Calculate actual timestamp (microsecond precision)
+        let us = (accumulated_time_secs * 1_000_000.0) as i64;
+        let timestamp = base_time + chrono::Duration::microseconds(us);
 
         // Parse bus ID
         let bus = record.get(bus_idx).and_then(|s| s.parse::<u8>().ok()).unwrap_or(0);
