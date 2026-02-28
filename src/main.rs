@@ -580,6 +580,28 @@ fn main() {
         let _ = std::fs::create_dir_all(parent);
     }
 
+    // If no user layout exists, copy the default layout
+    if !ini_path.exists() {
+        // Try to find default_layout.ini next to the executable or in current dir
+        let exe_dir = std::env::current_exe()
+            .ok()
+            .and_then(|p| p.parent().map(|p| p.to_path_buf()));
+        
+        let default_layout_paths: Vec<std::path::PathBuf> = vec![
+            exe_dir.map(|p| p.join("default_layout.ini")).unwrap_or_default(),
+            std::path::PathBuf::from("default_layout.ini"),
+        ];
+
+        for default_path in default_layout_paths {
+            if default_path.exists() {
+                if let Ok(contents) = std::fs::read_to_string(&default_path) {
+                    let _ = std::fs::write(&ini_path, contents);
+                    break;
+                }
+            }
+        }
+    }
+
     imgui.set_ini_filename(Some(ini_path));
 
     // Disable debug log via FFI
@@ -596,7 +618,7 @@ fn main() {
     imgui.io_mut().config_flags |= imgui::ConfigFlags::DOCKING_ENABLE;
 
     // Configure fonts
-    let hidpi_factor = window.scale_factor();
+    let mut hidpi_factor = window.scale_factor();
     let font_size = (14.0 * hidpi_factor) as f32;
     imgui.fonts().add_font(&[FontSource::DefaultFontData {
         config: Some(FontConfig {
@@ -1214,6 +1236,21 @@ fn main() {
             Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
                 state.save_settings();
                 window_target.exit();
+            }
+            Event::WindowEvent { event: WindowEvent::Resized(size), .. } => {
+                // Resize the GL surface to match the new window size
+                if let (Some(w), Some(h)) = (
+                    std::num::NonZeroU32::new(size.width),
+                    std::num::NonZeroU32::new(size.height)
+                ) {
+                    unsafe {
+                        surface.resize(&context, w, h);
+                    }
+                }
+            }
+            Event::WindowEvent { event: WindowEvent::ScaleFactorChanged { scale_factor, .. }, .. } => {
+                // Update hidpi factor when moving between displays
+                hidpi_factor = scale_factor;
             }
             _ => {}
         }

@@ -1,8 +1,9 @@
 [package]
 name = "shit"
-version = "0.1.16"
+version = "0.1.17"
 edition = "2021"
 description = "Signal Harvesting & Interpretation Toolkit"
+include = ["src/**/*", "Cargo.toml", "Cargo.lock", "default_layout.ini"]
 
 [dependencies]
 # imgui and backends
