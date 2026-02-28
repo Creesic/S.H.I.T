@@ -293,28 +293,36 @@ impl MessageListWindow {
             if self.sort_ascending { cmp } else { cmp.reverse() }
         });
 
-        // Render rows
+        // Render rows with two columns: ID|Bus|Name|Freq|Count | Data (colored bytes)
+        ui.columns(2, "msg_list_cols", false);
+        ui.set_column_width(0, 360.0);  // Wide enough for ID, Bus, Name (18), Freq (8), Count (6)
+
         for (id, bus) in sorted_keys {
             let state = self.states.get(&(id, bus)).unwrap();
             let is_selected = self.selected == Some((id, bus));
-            let is_active = state.is_active();
 
-            // Format row label with fixed-width columns
+            // Column 0: ID, Bus, Name, Freq, Count
             let name_padded = format!("{:<18}", &state.name[..state.name.len().min(18)]);
-            let row_label = format!("0x{:03X}  {}    {}{:>8}  {:>6}   ##row_{}_{}",
+            let row_label = format!("0x{:03X}  {}    {}{:>8}  {:>6} ##row_{}_{}",
                 id, bus, name_padded, state.freq_str(), state.count, id, bus);
 
             if ui.selectable_config(&row_label).selected(is_selected).build() {
                 self.selected = Some((id, bus));
             }
 
-            // Show colored data on hover
             if ui.is_item_hovered() {
                 ui.tooltip(|| {
                     ui.text(format!("Data: {}", state.hex_data()));
                 });
             }
+
+            // Column 1: Colored bytes
+            ui.next_column();
+            self.render_colored_bytes(ui, state);
+            ui.next_column();
         }
+
+        ui.columns(1, "", false);
 
         // Show selected message details
         if let Some(state) = self.selected_message() {

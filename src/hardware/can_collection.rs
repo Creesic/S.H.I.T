@@ -103,6 +103,12 @@ impl CanManagerCollection {
         }
     }
 
+    /// Check if an interface is already connected or connecting
+    pub async fn has_interface(&self, interface: &str) -> bool {
+        let interfaces = self.interfaces.read().await;
+        interfaces.values().any(|m| m.interface_name == interface)
+    }
+
     /// Connect to a new CAN interface, assigning it the lowest available bus ID
     ///
     /// Returns the assigned bus ID on success
@@ -112,6 +118,11 @@ impl CanManagerCollection {
         config: CanConfig,
         interface_type: InterfaceType,
     ) -> Result<u8, String> {
+        // Prevent duplicate connection to same interface
+        if self.has_interface(interface).await {
+            return Err(format!("Already connected or connecting to {}", interface));
+        }
+
         // Allocate the lowest available bus ID
         let bus_id = {
             let mut allocator = self.allocator.lock().await;

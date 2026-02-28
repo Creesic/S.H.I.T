@@ -1,8 +1,12 @@
+#![cfg_attr(target_os = "windows", windows_subsystem = "console")]
+
 mod core;
 mod decode;
 mod hardware;
 mod input;
+mod logging;
 mod playback;
+mod plugins;
 mod ui;
 
 use core::{CanMessage, DbcFile};
@@ -11,7 +15,8 @@ use input::load_file;
 use playback::PlaybackEngine;
 use hardware::CanManagerCollection;
 use hardware::can_interface::InterfaceType;
-use ui::{MessageListWindow, FileDialogs, MultiSignalGraph, HardwareManagerWindow, LiveModeAction, LiveMessageWindow, MessageSenderWindow, MessageStatsWindow, PatternAnalyzerWindow, ShortcutManager, ExportDialog, AboutDialog, LiveModeState, BitVisualizerWindow, SignalInfo};
+use plugins::{PluginContext, PluginRegistry};
+use ui::{MessageListWindow, FileDialogs, MultiSignalGraph, HardwareManagerWindow, LiveModeAction, LiveMessageWindow, MessageSenderWindow, MessageStatsWindow, PatternAnalyzerWindow, ShortcutManager, ExportDialog, AboutDialog, BitVisualizerWindow, SignalInfo, LogWindow};
 use chrono::{DateTime, Utc};
 use imgui::{Context, FontConfig, FontSource, Condition};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
@@ -27,6 +32,7 @@ use glow::HasContext;
 
 use std::time::Instant;
 use std::sync::{Arc, Mutex};
+use tracing::{info, error};
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::fs;
 use std::path::PathBuf;
@@ -49,6 +55,8 @@ struct AppState {
     about_dialog: AboutDialog,
     // Bit visualizer
     bit_visualizer: BitVisualizerWindow,
+    // Log window
+    log_window: LogWindow,
     dbc_file: DbcFile,
     signal_decoder: SignalDecoder,
     file_loaded: bool,
@@ -70,8 +78,13 @@ struct AppState {
     show_shortcuts: bool,
     // Bit visualizer visibility
     show_bit_visualizer: bool,
+    // Log window
+    show_log: bool,
     // CAN hardware manager
     can_collection: CanManagerCollection,
+    // Plugins
+    plugin_registry: PluginRegistry,
+    plugin_send_queue: Vec<(u8, CanMessage)>,
     // Async loading state
     loading: bool,
     loading_progress: f32,
@@ -99,6 +112,7 @@ struct AppSettings {
     show_pattern_analyzer: bool,
     show_shortcuts: bool,
     show_bit_visualizer: bool,
+    show_log: bool,
 }
 
 impl AppSettings {
@@ -159,6 +173,8 @@ impl AppState {
             about_dialog: AboutDialog::new(),
             // Bit visualizer
             bit_visualizer: BitVisualizerWindow::new(),
+            // Log window
+            log_window: LogWindow::new(),
             dbc_file: DbcFile::new(),
             signal_decoder: SignalDecoder::new(),
             file_loaded: false,
@@ -179,8 +195,13 @@ impl AppState {
             show_shortcuts: settings.show_shortcuts,
             // Bit visualizer visibility
             show_bit_visualizer: settings.show_bit_visualizer,
+            // Log window
+            show_log: settings.show_log,
             // CAN hardware manager
             can_collection: CanManagerCollection::new(),
+            // Plugins
+            plugin_registry: PluginRegistry::new(),
+            plugin_send_queue: Vec::new(),
             // Async loading
             loading: false,
             loading_progress: 0.0,
@@ -201,6 +222,7 @@ impl AppState {
             show_pattern_analyzer: self.show_pattern_analyzer,
             show_shortcuts: self.show_shortcuts,
             show_bit_visualizer: self.show_bit_visualizer,
+            show_log: self.show_log,
         };
         settings.save();
     }
@@ -313,7 +335,7 @@ impl AppState {
         self.pattern_analyzer.analyze(&messages);
 
         self.status_message = Some(format!("Loaded {} messages", msg_count));
-        println!("Loaded {} messages", msg_count);
+        info!("Loaded {} messages", msg_count);
     }
 
     /// Unload the currently loaded file
@@ -455,11 +477,11 @@ impl AppState {
                 }
 
                 self.status_message = Some(format!("Loaded DBC: {} messages defined", self.dbc_file.messages.len()));
-                println!("Loaded DBC with {} messages", self.dbc_file.messages.len());
+                info!("Loaded DBC with {} messages", self.dbc_file.messages.len());
             }
             Err(e) => {
                 self.status_message = Some(format!("Failed to load DBC: {}", e));
-                eprintln!("Failed to load DBC: {}", e);
+                error!("Failed to load DBC: {}", e);
             }
         }
     }
@@ -513,8 +535,9 @@ impl AppState {
 }
 
 fn main() {
-    // Initialize logging
-    tracing_subscriber::fmt::init();
+    // Initialize logging: console (stderr), file, and in-app buffer
+    logging::init();
+    info!("S.H.I.T v{} starting", env!("CARGO_PKG_VERSION"));
 
     // Create tokio runtime for async operations
     let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
@@ -801,6 +824,29 @@ fn main() {
                             state.show_bit_visualizer = !state.show_bit_visualizer;
                         }
                         drop(_tok);
+
+                        ui.separator();
+
+                        // Log (console output)
+                        let _tok = if state.show_log { Some(ui.push_style_color(imgui::StyleColor::Text, [0.0, 1.0, 0.0, 1.0])) } else { None };
+                        if ui.menu_item("Log") {
+                            state.show_log = !state.show_log;
+                        }
+                        drop(_tok);
+                    });
+
+                    ui.menu("Plugins", || {
+                        let plugin_items: Vec<(String, String)> = state.plugin_registry.plugins()
+                            .map(|(id, name, _)| (id.to_string(), name.to_string()))
+                            .collect();
+                        for (id, name) in plugin_items {
+                            let visible = state.plugin_registry.is_visible(&id);
+                            let _tok = if visible { Some(ui.push_style_color(imgui::StyleColor::Text, [0.0, 1.0, 0.0, 1.0])) } else { None };
+                            if ui.menu_item(&name) {
+                                state.plugin_registry.toggle_visible(&id);
+                            }
+                            drop(_tok);
+                        }
                     });
 
                     ui.menu("Help", || {
@@ -945,22 +991,19 @@ fn main() {
                     let action = state.hardware_manager.render(&ui, &mut state.show_hardware_manager);
                     match action {
                         LiveModeAction::Connect { interface, config } => {
-                            eprintln!("[S.H.I.T] Connect button clicked!");
-                            eprintln!("[S.H.I.T] Interface: {}", interface);
-                            eprintln!("[S.H.I.T] Bitrate: {}", config.bitrate);
-                            eprintln!("[S.H.I.T] Listen only: {}", config.listen_only);
+                            info!("[S.H.I.T] Connect button clicked! Interface: {}, Bitrate: {}, Listen only: {}", interface, config.bitrate, config.listen_only);
 
                             // Determine interface type
                             let interface_type = if interface.starts_with("mock://") {
-                                eprintln!("[S.H.I.T] Interface type: Virtual (mock)");
+                                info!("[S.H.I.T] Interface type: Virtual (mock)");
                                 InterfaceType::Virtual
                             } else {
-                                eprintln!("[S.H.I.T] Interface type: Serial");
+                                info!("[S.H.I.T] Interface type: Serial");
                                 InterfaceType::Serial
                             };
 
                             // Connect to the CAN interface
-                            eprintln!("[S.H.I.T] Calling can_collection.connect()...");
+                            info!("[S.H.I.T] Calling can_collection.connect()...");
                             let result = rt.block_on(state.can_collection.connect(
                                 &interface,
                                 crate::hardware::can_interface::CanConfig {
@@ -971,31 +1014,31 @@ fn main() {
                                 interface_type,
                             ));
 
-                            eprintln!("[S.H.I.T] Connect result: {:?}", result);
+                            info!("[S.H.I.T] Connect result: {:?}", result);
                             match result {
                                 Ok(bus_id) => {
-                                    eprintln!("[S.H.I.T] Connected successfully as Bus {}!", bus_id);
-                                    state.status_message = Some(format!("Connected to {} as Bus {}", interface, bus_id));
+                                    info!("[S.H.I.T] Connecting as Bus {} (status will update when ready)...", bus_id);
+                                    state.status_message = Some(format!("Connecting to {} as Bus {}...", interface, bus_id));
                                     state.hardware_manager.state_mut().add_connected_interface(
                                         bus_id,
                                         interface.clone(),
-                                        crate::hardware::can_manager::ConnectionStatus::Connected,
+                                        crate::hardware::can_manager::ConnectionStatus::Connecting,
                                     );
                                 }
                                 Err(e) => {
-                                    eprintln!("[S.H.I.T] Connection FAILED: {}", e);
+                                    error!("[S.H.I.T] Connection FAILED: {}", e);
                                     state.status_message = Some(format!("Failed to connect: {}", e));
                                 }
                             }
                         }
                         LiveModeAction::Disconnect => {
-                            println!("Disconnect from all interfaces");
+                            info!("Disconnect from all interfaces");
                             rt.block_on(state.can_collection.disconnect_all());
                             state.hardware_manager.state_mut().clear_connected_interfaces();
                             state.status_message = Some("Disconnected from all CAN interfaces".to_string());
                         }
                         LiveModeAction::DisconnectBus { bus_id } => {
-                            println!("Disconnect Bus {}", bus_id);
+                            info!("Disconnect Bus {}", bus_id);
                             match rt.block_on(state.can_collection.disconnect(bus_id)) {
                                 Ok(()) => {
                                     state.hardware_manager.state_mut().remove_connected_interface(bus_id);
@@ -1007,25 +1050,25 @@ fn main() {
                             }
                         }
                         LiveModeAction::DisconnectAll => {
-                            println!("Disconnect all interfaces");
+                            info!("Disconnect all interfaces");
                             rt.block_on(state.can_collection.disconnect_all());
                             state.hardware_manager.state_mut().clear_connected_interfaces();
                             state.status_message = Some("Disconnected all interfaces".to_string());
                         }
                         LiveModeAction::SendMessage { id, data } => {
-                            println!("Send message: 0x{:03X} {:?}", id, data);
+                            info!("Send message: 0x{:03X} {:?}", id, data);
                             let msg = CanMessage::new(0, id, data);
                             // Send to bus 0 by default (could add UI to select bus)
                             let _ = rt.block_on(state.can_collection.send_to_bus(0, msg));
                         }
                         LiveModeAction::StartRecording => {
-                            eprintln!("[S.H.I.T] Recording started");
+                            info!("[S.H.I.T] Recording started");
                             state.status_message = Some("Recording started".to_string());
                         }
                         LiveModeAction::StopRecording => {
                             let live_state = state.hardware_manager.state();
                             let msg_count = live_state.live_messages.len();
-                            eprintln!("[S.H.I.T] Recording stopped - {} messages captured", msg_count);
+                            info!("[S.H.I.T] Recording stopped - {} messages captured", msg_count);
 
                             if !live_state.live_messages.is_empty() {
                                 // Convert live messages to CanMessage format and load into main state
@@ -1056,13 +1099,13 @@ fn main() {
                                     state.populate_chart_data();
                                 }
 
-                                eprintln!("[S.H.I.T] Loaded {} recorded messages into playback", state.messages.len());
+                                info!("[S.H.I.T] Loaded {} recorded messages into playback", state.messages.len());
                             }
 
                             state.status_message = Some(format!("Recording stopped - {} messages loaded into playback", msg_count));
                         }
                         LiveModeAction::SaveData => {
-                            eprintln!("[S.H.I.T] Save data requested - {} messages", state.hardware_manager.state().live_messages.len());
+                            info!("[S.H.I.T] Save data requested - {} messages", state.hardware_manager.state().live_messages.len());
                             // Save to CSV file
                             let live_state = state.hardware_manager.state();
                             if let Some(path) = crate::ui::FileDialogs::export_csv_file() {
@@ -1093,11 +1136,11 @@ fn main() {
                                                 rel_time, msg.id, msg.bus, data_hex);
                                         }
                                         state.status_message = Some(format!("Saved {} messages to {}", live_state.live_messages.len(), path.display()));
-                                        eprintln!("[S.H.I.T] Saved {} messages to {}", live_state.live_messages.len(), path.display());
+                                        info!("[S.H.I.T] Saved {} messages to {}", live_state.live_messages.len(), path.display());
                                     }
                                     Err(e) => {
                                         state.status_message = Some(format!("Failed to save: {}", e));
-                                        eprintln!("[S.H.I.T] Failed to save: {}", e);
+                                        error!("[S.H.I.T] Failed to save: {}", e);
                                     }
                                 }
                             }
@@ -1106,11 +1149,17 @@ fn main() {
                     }
                 }
 
-                // Update live messages from CAN manager
-                if state.show_live_messages || state.hardware_manager.state().is_active {
-                    // Poll for new messages (even if window is closed, we need to process them for charts)
-                    let messages = rt.block_on(state.can_collection.get_messages());
+                // Poll for CAN messages when we have interfaces (including Connecting) - needed so status
+                // can update from Connecting to Connected. Also used by live state and plugins.
+                let has_interfaces = !state.hardware_manager.state().connected_interfaces.is_empty();
+                let live_messages = if state.show_live_messages || state.hardware_manager.state().is_active || has_interfaces {
+                    rt.block_on(state.can_collection.get_messages())
+                } else {
+                    Vec::new()
+                };
 
+                // Update live messages from CAN manager
+                if state.show_live_messages || state.hardware_manager.state().is_active || has_interfaces {
                     // Sync interface stats from CanManagerCollection
                     let stats = rt.block_on(state.can_collection.get_stats());
                     state.hardware_manager.state_mut().sync_interface_stats(&stats);
@@ -1119,7 +1168,7 @@ fn main() {
                     let is_recording = live_state.is_recording;
 
                     // Update live state with received messages - only add to buffer if recording
-                    for msg in &messages {
+                    for msg in &live_messages {
                         // Only store messages if recording is active
                         if is_recording {
                             live_state.add_message(msg.message.id, msg.message.data.clone(), msg.message.bus);
@@ -1127,6 +1176,9 @@ fn main() {
 
                         // Always update statistics
                         live_state.stats.messages_received += 1;
+
+                        // Update Messages panel with live data
+                        state.message_list.update_message(&msg.message);
 
                         // Decode and add to charts if signals are charted
                         let decoded = state.signal_decoder.decode_message(&msg.message);
@@ -1148,8 +1200,48 @@ fn main() {
                 if state.show_message_sender {
                     let is_connected = state.hardware_manager.state().is_active;
                     if let Some((id, data)) = state.message_sender.render(&ui, is_connected, &mut state.show_message_sender) {
-                        println!("Send CAN message: 0x{:03X} {:?}", id, data);
+                        info!("Send CAN message: 0x{:03X} {:?}", id, data);
                         // TODO: Actually send the message through the interface
+                    }
+                }
+
+                // Plugins - render visible plugins and process queued sends
+                let connected_buses: Vec<u8> = state.hardware_manager.state()
+                    .connected_interfaces
+                    .iter()
+                    .filter(|i| matches!(i.status, hardware::can_manager::ConnectionStatus::Connected))
+                    .map(|i| i.bus_id)
+                    .collect();
+                let is_connected = state.hardware_manager.state().is_active;
+
+                let plugin_ids: Vec<String> = state.plugin_registry.plugins()
+                    .map(|(id, _, _)| id.to_string())
+                    .collect();
+                for id in &plugin_ids {
+                    if state.plugin_registry.is_visible(id) {
+                        let mut ctx = PluginContext {
+                            queue_send: &mut state.plugin_send_queue,
+                            is_connected,
+                            connected_buses: &connected_buses,
+                        };
+                        state.plugin_registry.render_plugin(id, &ui, &mut ctx, &live_messages);
+                    }
+                }
+
+                // Process plugin queued messages (e.g. rusEFI wideband ECU status)
+                for (bus_id, msg) in state.plugin_send_queue.drain(..) {
+                    // Log commands (not ECU status which is sent every 10ms)
+                    if msg.id != 0x0EF50000 {
+                        info!(
+                            "[Plugins] Sending CAN 0x{:08X} to bus {} ({} bytes): {:02X?}",
+                            msg.id,
+                            bus_id,
+                            msg.data.len(),
+                            msg.data
+                        );
+                    }
+                    if let Err(e) = rt.block_on(state.can_collection.send_to_bus(bus_id, msg)) {
+                        error!("[Plugins] Failed to send: {}", e);
                     }
                 }
 
@@ -1205,6 +1297,11 @@ fn main() {
                     state.signal_decoder.set_dbc(state.dbc_file.clone());
                 }
 
+                // Log window
+                if state.show_log {
+                    state.log_window.render(&ui, &mut state.show_log);
+                }
+
                 // Keyboard Shortcuts help window
                 if state.show_shortcuts {
                     state.shortcut_manager.render_help(&ui, &mut state.show_shortcuts);
@@ -1213,7 +1310,7 @@ fn main() {
                 // Export Dialog
                 if let Some(_export_request) = state.export_dialog.render(&ui) {
                     // TODO: Implement actual export functionality
-                    println!("Export requested");
+                    info!("Export requested");
                 }
 
                 // About Dialog

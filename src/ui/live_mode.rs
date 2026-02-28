@@ -562,38 +562,6 @@ impl HardwareManagerWindow {
             }
         }
 
-        ui.separator();
-
-        // Live messages preview
-        if ui.collapsing_header("Live Messages", imgui::TreeNodeFlags::empty()) {
-            // Show last 10 messages
-            let count = self.state.live_messages.len().min(10);
-            let start = self.state.live_messages.len().saturating_sub(10);
-
-            ui.text(format!("Showing {} of {} messages", count, self.state.live_messages.len()));
-
-            for msg in self.state.live_messages.iter().skip(start) {
-                let data_hex: String = msg.data.iter()
-                    .map(|b| format!("{:02X}", b))
-                    .collect::<Vec<_>>()
-                    .join(" ");
-
-                ui.text(format!(
-                    "{:02}:{:02}:{:02}.{:03} | 0x{:03X} | {}",
-                    msg.timestamp.hour(),
-                    msg.timestamp.minute(),
-                    msg.timestamp.second(),
-                    msg.timestamp.nanosecond() / 1_000_000,
-                    msg.id,
-                    data_hex
-                ));
-            }
-
-            if ui.small_button("Clear Messages") {
-                self.state.clear_messages();
-            }
-        }
-
         action
     }
 }
