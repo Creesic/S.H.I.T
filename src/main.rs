@@ -14,10 +14,11 @@ use decode::SignalDecoder;
 use input::load_file;
 use playback::PlaybackEngine;
 use hardware::CanManagerCollection;
+use hardware::can_manager::ManagerMessage;
 use hardware::can_interface::InterfaceType;
 use plugins::{PluginContext, PluginRegistry};
 use ui::{MessageListWindow, FileDialogs, MultiSignalGraph, HardwareManagerWindow, LiveModeAction, LiveMessageWindow, MessageSenderWindow, MessageStatsWindow, PatternAnalyzerWindow, ShortcutManager, ExportDialog, AboutDialog, BitVisualizerWindow, SignalInfo, LogWindow};
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use imgui::{Context, FontConfig, FontSource, Condition};
 use imgui_winit_support::{HiDpiMode, WinitPlatform};
 use winit::event::{Event, WindowEvent};
@@ -95,6 +96,8 @@ struct AppState {
     // Plugins
     plugin_registry: PluginRegistry,
     plugin_send_queue: Vec<(u8, CanMessage)>,
+    /// Combined live + playback messages for plugins (built each frame)
+    plugin_message_buffer: Vec<ManagerMessage>,
     // Async loading state
     loading: bool,
     loading_progress: f32,
@@ -266,6 +269,7 @@ impl AppState {
             // Plugins
             plugin_registry: PluginRegistry::new(),
             plugin_send_queue: Vec::new(),
+            plugin_message_buffer: Vec::new(),
             // Async loading
             loading: false,
             loading_progress: 0.0,
@@ -1573,6 +1577,23 @@ fn main() {
                     .collect();
                 let is_connected = state.hardware_manager.state().is_active;
 
+                // Build combined message buffer for plugins: playback (when file loaded) + live
+                state.plugin_message_buffer.clear();
+                if state.file_loaded {
+                    let window = state.playback.get_window(
+                        Duration::seconds(60),
+                        Duration::seconds(1),
+                    );
+                    for msg in window {
+                        state.plugin_message_buffer.push(ManagerMessage {
+                            message: msg.clone(),
+                            timestamp: msg.timestamp,
+                        });
+                    }
+                }
+                state.plugin_message_buffer.extend(live_messages.iter().cloned());
+                let has_playback = state.file_loaded;
+
                 let plugin_ids: Vec<String> = state.plugin_registry.plugins()
                     .map(|(id, _, _)| id.to_string())
                     .collect();
@@ -1581,10 +1602,11 @@ fn main() {
                         let mut ctx = PluginContext {
                             queue_send: &mut state.plugin_send_queue,
                             is_connected,
+                            has_playback,
                             connected_buses: &connected_buses,
                             connected_interfaces: &connected_interfaces,
                         };
-                        state.plugin_registry.render_plugin(id, &ui, &mut ctx, &live_messages);
+                        state.plugin_registry.render_plugin(id, &ui, &mut ctx, &state.plugin_message_buffer);
                     }
                 }
 

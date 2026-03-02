@@ -5,6 +5,7 @@ pub mod shortcuts;
 pub mod windows;
 pub mod dialogs;
 pub mod bit_visualizer;
+pub mod log_window;
 
 pub use multi_graph::{MultiSignalGraph, SignalInfo};
 pub use live_mode::{HardwareManagerWindow, LiveModeState, LiveModeAction, LiveMessageWindow, MessageSenderWindow};
@@ -13,3 +14,4 @@ pub use shortcuts::{ShortcutManager, ShortcutAction, ExportDialog, AboutDialog, 
 pub use windows::{MessageListWindow, MessageState};
 pub use dialogs::FileDialogs;
 pub use bit_visualizer::BitVisualizerWindow;
+pub use log_window::LogWindow;
