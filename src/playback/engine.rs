@@ -206,6 +206,13 @@ impl PlaybackEngine {
         }
     }
 
+    /// Get a sample of messages from the start of the log for discovery (e.g. finding sensor IDs).
+    /// Returns the first `max_messages` messages, or all if fewer.
+    pub fn get_discovery_sample(&self, max_messages: usize) -> &[CanMessage] {
+        let end = max_messages.min(self.messages.len());
+        &self.messages[..end]
+    }
+
     /// Get messages visible in the current time window
     pub fn get_window(&self, before: Duration, after: Duration) -> &[CanMessage] {
         if let Some(current) = self.current_time() {

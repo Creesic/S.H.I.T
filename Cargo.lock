@@ -2052,7 +2052,7 @@ dependencies = [
 
 [[package]]
 name = "shit"
-version = "0.1.37"
+version = "0.1.48"
 dependencies = [
  "anyhow",
  "async-trait",

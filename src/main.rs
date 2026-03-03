@@ -1578,8 +1578,16 @@ fn main() {
                 let is_connected = state.hardware_manager.state().is_active;
 
                 // Build combined message buffer for plugins: playback (when file loaded) + live
+                // Include discovery sample so existing sensors are found on load/connect
                 state.plugin_message_buffer.clear();
                 if state.file_loaded {
+                    let discovery = state.playback.get_discovery_sample(10_000);
+                    for msg in discovery {
+                        state.plugin_message_buffer.push(ManagerMessage {
+                            message: msg.clone(),
+                            timestamp: msg.timestamp,
+                        });
+                    }
                     let window = state.playback.get_window(
                         Duration::seconds(60),
                         Duration::seconds(1),
@@ -1588,6 +1596,23 @@ fn main() {
                         state.plugin_message_buffer.push(ManagerMessage {
                             message: msg.clone(),
                             timestamp: msg.timestamp,
+                        });
+                    }
+                }
+                // Live: include accumulated messages for discovery when connected
+                if has_interfaces {
+                    let live_state = state.hardware_manager.state();
+                    let discovery_count = 10_000.min(live_state.live_messages.len());
+                    let start = live_state.live_messages.len().saturating_sub(discovery_count);
+                    for lm in &live_state.live_messages[start..] {
+                        state.plugin_message_buffer.push(ManagerMessage {
+                            message: crate::core::CanMessage {
+                                timestamp: lm.timestamp,
+                                bus: lm.bus,
+                                id: lm.id,
+                                data: lm.data.clone(),
+                            },
+                            timestamp: lm.timestamp,
                         });
                     }
                 }
@@ -1622,8 +1647,11 @@ fn main() {
                             msg.data
                         );
                     }
-                    if let Err(e) = rt.block_on(state.can_collection.send_to_bus(bus_id, msg)) {
+                    if let Err(e) = rt.block_on(state.can_collection.send_to_bus(bus_id, msg.clone())) {
                         error!("[Plugins] Failed to send: {}", e);
+                    } else {
+                        // Show sent messages in message list (TX, different color)
+                        state.message_list.add_sent_message(&msg);
                     }
                 }
 
