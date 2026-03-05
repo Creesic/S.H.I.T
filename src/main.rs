@@ -1183,6 +1183,21 @@ fn main() {
                         if ui.menu_item("Load DBC...") {
                             state.show_dbc_open_pending = true;
                         }
+                        if ui.menu_item("Save DBC...") {
+                            if let Some(path) = FileDialogs::save_dbc_file() {
+                                if let Some(path_str) = path.to_str() {
+                                    match state.dbc_file.save(&path) {
+                                        Ok(()) => {
+                                            state.add_recent_dbc_file(path_str);
+                                            state.status_message = Some(format!("Saved DBC to {}", path_str));
+                                        }
+                                        Err(e) => {
+                                            state.status_message = Some(format!("Failed to save DBC: {}", e));
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         if ui.menu_item("Export to CSV...") {
                             state.export_dialog.show();
                         }

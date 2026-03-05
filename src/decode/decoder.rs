@@ -118,18 +118,18 @@ pub fn extract_bits(data: &[u8], start_bit: u8, bit_length: u8, byte_order: Byte
     let bit_length = bit_length as usize;
 
     // Convert DBC bit position to actual bit position
+    // Intel: start_bit = LSB, read forward
+    // Motorola: start_bit = MSB, so LSB is at (start_bit - length + 1); we read from LSB forward
     let (byte_idx, bit_idx) = match byte_order {
         ByteOrder::Intel => {
-            // Intel: bits are numbered LSB first within bytes, sequential across bytes
-            // Bit N is at byte (N / 8), bit position (N % 8)
             (start_bit / 8, start_bit % 8)
         }
         ByteOrder::Motorola => {
-            // Motorola: bits are numbered MSB first within bytes
-            // DBC uses a confusing numbering scheme for Motorola
-            // Bit N in DBC notation maps to byte (N / 8), bit position (7 - (N % 8))
-            // But for multi-byte signals, the bytes are reversed
-            dbc_motorola_to_position(start_bit)
+            if start_bit + 1 < bit_length {
+                return None; // Invalid: MSB at start_bit requires start_bit >= bit_length - 1
+            }
+            let lsb = start_bit + 1 - bit_length;
+            dbc_motorola_to_position(lsb)
         }
     };
 
@@ -163,15 +163,12 @@ pub fn extract_bits(data: &[u8], start_bit: u8, bit_length: u8, byte_order: Byte
     Some(result)
 }
 
-/// Convert DBC Motorola bit position to byte/bit position
-///
-/// In DBC format, Motorola signals use a special bit numbering:
-/// - Byte 0: bits 7,6,5,4,3,2,1,0 (MSB to LSB)
-/// - Byte 1: bits 15,14,13,12,11,10,9,8
-/// etc.
+/// Convert DBC bit position to byte/bit position.
+/// DBC numbering: bit 0 = LSB of byte 0, bit 7 = MSB of byte 0 (same for Intel and Motorola).
+/// bit_in_byte 0 = LSB, 7 = MSB (for extraction: (data[byte] >> bit_in_byte) & 1).
 fn dbc_motorola_to_position(dbc_bit: usize) -> (usize, usize) {
     let byte = dbc_bit / 8;
-    let bit_in_byte = 7 - (dbc_bit % 8);
+    let bit_in_byte = dbc_bit % 8;
     (byte, bit_in_byte)
 }
 
@@ -186,7 +183,13 @@ pub fn insert_bits(data: &mut [u8], value: u64, start_bit: u8, bit_length: u8, b
 
     let (byte_idx, bit_idx) = match byte_order {
         ByteOrder::Intel => (start_bit / 8, start_bit % 8),
-        ByteOrder::Motorola => dbc_motorola_to_position(start_bit),
+        ByteOrder::Motorola => {
+            if start_bit + 1 < bit_length {
+                return false; // Invalid: MSB at start_bit requires start_bit >= bit_length - 1
+            }
+            let lsb = start_bit + 1 - bit_length;
+            dbc_motorola_to_position(lsb)
+        }
     };
 
     if byte_idx >= data.len() {
@@ -316,6 +319,19 @@ mod tests {
         assert_eq!(signals[0].name, "TestSignal");
         assert_eq!(signals[0].raw_value, 100);
         assert_eq!(signals[0].physical_value, 10.0); // 100 * 0.5 - 40 = 10
+    }
+
+    #[test]
+    fn test_extract_bits_motorola() {
+        // Motorola: start_bit 51 = MSB, 4 bits = DBC bits 48,49,50,51
+        // Byte 6: bits 48-55. So we extract from LSB (bit 48) at byte 6.
+        // Example: data with 0b1011 at bits 48-51 (LSB=1, MSB=1) -> value 0b1101 = 13
+        let mut data = [0u8; 8];
+        data[6] = 0b0000_1011; // bits 0-3 of byte 6 = DBC bits 48-51 (48 at pos 0, 51 at pos 3 in typical layout)
+        // DBC bit 48 = LSB of byte 6. In dbc_motorola_to_position, bit 48 -> (6, 7) if 7-(48%8)=7.
+        // So we read from byte 6, bit 7. That's the LSB of the byte (rightmost). Good.
+        let result = extract_bits(&data, 51, 4, ByteOrder::Motorola);
+        assert_eq!(result, Some(0b1011)); // 4 bits: 1,1,0,1 from LSB to MSB
     }
 
     #[test]

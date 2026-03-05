@@ -1,5 +1,5 @@
 use imgui::{Condition, StyleColor, Ui};
-use crate::core::dbc::{DbcFile, DbcMessage, DbcSignal, ByteOrder, ValueType};
+use crate::core::dbc::{DbcFile, DbcMessage, DbcSignal, ByteOrder, ValueType, ValueDescription};
 use crate::decode::decoder::extract_bits;
 use std::cell::RefCell;
 
@@ -143,6 +143,10 @@ pub struct BitVisualizerWindow {
     edit_factor: String,
     edit_offset: String,
     edit_unit: String,
+    edit_value_descriptions: Vec<(i64, String)>,
+    edit_new_val_value: String,
+    edit_new_val_desc: String,
+    edit_original_signal_name: String,
 
     // Callbacks
     on_signal_created: RefCell<Option<SignalCreatedCallback>>,
@@ -182,6 +186,10 @@ impl BitVisualizerWindow {
             edit_factor: String::from("1"),
             edit_offset: String::from("0"),
             edit_unit: String::new(),
+            edit_value_descriptions: Vec::new(),
+            edit_new_val_value: String::new(),
+            edit_new_val_desc: String::new(),
+            edit_original_signal_name: String::new(),
             on_signal_created: RefCell::new(None),
             on_toggle_chart: RefCell::new(None),
             charted_signals: RefCell::new(Vec::new()),
@@ -533,7 +541,7 @@ impl BitVisualizerWindow {
         self.create_quadrant = Some(quadrant);
     }
 
-    fn open_edit_dialog(&mut self, quadrant: usize, signal_idx: usize, signal: &DbcSignal) {
+    fn open_edit_dialog(&mut self, quadrant: usize, signal_idx: usize, signal: &DbcSignal, dbc: &DbcFile) {
         self.edit_quadrant = Some(quadrant);
         self.editing_signal_idx = Some(signal_idx);
         self.editing_signal_name = signal.name.clone();
@@ -544,6 +552,12 @@ impl BitVisualizerWindow {
         self.edit_factor = signal.factor.to_string();
         self.edit_offset = signal.offset.to_string();
         self.edit_unit = signal.unit.clone().unwrap_or_default();
+        self.edit_value_descriptions = dbc.value_tables.get(&signal.name)
+            .map(|v| v.iter().map(|d| (d.value, d.description.clone())).collect())
+            .unwrap_or_default();
+        self.edit_new_val_value.clear();
+        self.edit_new_val_desc.clear();
+        self.edit_original_signal_name = signal.name.clone();
         self.show_edit_dialog = true;
     }
 
@@ -696,7 +710,7 @@ impl BitVisualizerWindow {
         let mut should_delete = false;
 
         ui.window("Edit Signal")
-            .size([400.0, 380.0], Condition::FirstUseEver)
+            .size([420.0, 520.0], Condition::FirstUseEver)
             .position([200.0, 200.0], Condition::FirstUseEver)
             .opened(&mut dialog_open)
             .build(|| {
@@ -746,6 +760,30 @@ impl BitVisualizerWindow {
                 ui.input_text("##offset", &mut offset).build();
                 ui.text("Unit:"); ui.same_line();
                 ui.input_text("##unit", &mut unit).build();
+
+                ui.separator();
+                ui.indent();
+                let mut to_remove = None;
+                for (i, (val, desc)) in self.edit_value_descriptions.iter().enumerate() {
+                    ui.text(format!("{} = \"{}\"", val, desc));
+                    ui.same_line();
+                    if ui.small_button(&format!("X##val{}", i)) {
+                        to_remove = Some(i);
+                    }
+                }
+                if let Some(idx) = to_remove {
+                    self.edit_value_descriptions.remove(idx);
+                }
+                ui.input_text("Value##newval", &mut self.edit_new_val_value).hint("e.g. 0").build();
+                ui.input_text("Description##newdesc", &mut self.edit_new_val_desc).hint("e.g. Off").build();
+                if ui.button("Add value") {
+                    if let Ok(v) = self.edit_new_val_value.parse::<i64>() {
+                        let desc = std::mem::take(&mut self.edit_new_val_desc);
+                        self.edit_value_descriptions.push((v, desc));
+                        self.edit_new_val_value.clear();
+                    }
+                }
+                ui.unindent();
 
                 ui.separator();
 
@@ -809,6 +847,18 @@ impl BitVisualizerWindow {
                         }
                     }
                 }
+            }
+            // Update value_tables: remove old key if name changed, set new key with descriptions
+            if self.edit_original_signal_name != self.editing_signal_name {
+                dbc.value_tables.remove(&self.edit_original_signal_name);
+            }
+            if !self.edit_value_descriptions.is_empty() {
+                let descriptions: Vec<ValueDescription> = self.edit_value_descriptions.iter()
+                    .map(|(v, d)| ValueDescription { value: *v, description: d.clone() })
+                    .collect();
+                dbc.value_tables.insert(self.editing_signal_name.clone(), descriptions);
+            } else {
+                dbc.value_tables.remove(&self.editing_signal_name);
             }
             self.show_edit_dialog = false;
             self.edit_quadrant = None;
@@ -931,7 +981,7 @@ impl BitVisualizerWindow {
                         multiplexor: None,
                     };
                     if ui.selectable_config(&format!("{}##q{}s{}", name, idx, i)).selected(is_selected).build() {
-                        self.open_edit_dialog(idx, i, &signal);
+                        self.open_edit_dialog(idx, i, &signal, dbc);
                     }
                     drop(_name_color);
 
