@@ -1084,9 +1084,19 @@ fn display_pos_to_dbc_bit(display_pos: usize) -> usize {
 
 impl SignalInfo {
     /// DBC bit positions (0=LSB, 7=MSB within byte 0)
+    /// - Intel (@1+): start_bit = LSB, signal spans [start_bit, start_bit+length-1]
+    /// - Motorola (@0+): start_bit = MSB, signal spans [start_bit-length+1, start_bit]
     fn get_dbc_bit_positions(&self) -> Vec<usize> {
-        let start = self.start_bit as usize;
-        let end = start + self.bit_length as usize;
+        let (start, end) = match self.byte_order {
+            ByteOrder::Intel => {
+                (self.start_bit as usize, self.start_bit as usize + self.bit_length as usize)
+            }
+            ByteOrder::Motorola => {
+                let msb = self.start_bit as usize;
+                let lsb = msb + 1 - self.bit_length as usize;
+                (lsb, msb + 1)
+            }
+        };
         (start..end).collect()
     }
 

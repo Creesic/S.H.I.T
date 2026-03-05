@@ -48,6 +48,8 @@ struct AppState {
     live_message_window: LiveMessageWindow,
     message_sender: MessageSenderWindow,
     initial_data_populated: bool,  // Track if we've done initial population
+    /// When true, update_graphs runs even when paused (e.g. after timeline scrub)
+    seek_triggered_ui_update: bool,
     // Phase 6 components
     message_stats: MessageStatsWindow,
     pattern_analyzer: PatternAnalyzerWindow,
@@ -231,6 +233,7 @@ impl AppState {
             live_message_window: LiveMessageWindow::new(),
             message_sender: MessageSenderWindow::new(),
             initial_data_populated: false,
+            seek_triggered_ui_update: false,
             // Phase 6 components
             message_stats: MessageStatsWindow::new(),
             pattern_analyzer: PatternAnalyzerWindow::new(),
@@ -923,10 +926,14 @@ impl AppState {
             return;
         }
 
-        // Update when playing, or do initial population once when stopped/paused
+        // Update when playing, on initial population, or after a seek (e.g. timeline scrub while paused)
         let is_initial_pop = !self.initial_data_populated && self.playback.current_time().is_some();
-        if !self.playback.is_playing() && !is_initial_pop {
+        let seek_triggered = self.seek_triggered_ui_update;
+        if !self.playback.is_playing() && !is_initial_pop && !seek_triggered {
             return;
+        }
+        if seek_triggered {
+            self.seek_triggered_ui_update = false;
         }
 
         if let Some(_current_time) = self.playback.current_time() {
@@ -1438,6 +1445,7 @@ fn main() {
                         if let Some(current) = state.playback.current_time() {
                             let new_time = current + chrono::Duration::milliseconds((offset_secs * 1000.0) as i64);
                             state.playback.seek_to_time(Some(new_time));
+                            state.seek_triggered_ui_update = true;
                         }
                     }
 
